@@ -23,7 +23,6 @@ library(effectsize) # computing effect sizes
 library(ggplot2) # plotting
 library(magrittr) # assignment pipe operator
 
-
 # Read data ----
 # Dyadic interaction dataset of infants at 4 and 8 months.
 
@@ -97,27 +96,27 @@ base::print(roc_all$auc)
 # Use print.thres = TRUE, print.thres.best.method = "youden" to display 
 # the specificity & sensitivity thresholds.
 pROC::plot.roc(roc_all$rocs[[1]], print.auc = TRUE, print.auc.y = .8, 
-               print.auc.x = .35, xlim = c(1, 0), ylim = c(0,1), 
-               print.thres = TRUE, print.thres.best.method = "youden",
-               main = "Specificity vs. Sensitivity of the Automatic Global Emotional Valence Classifier")
+               print.auc.x = .35, xlim = c(1, 0), ylim = c(0, 1), 
+               print.thres = FALSE, print.thres.best.method = "youden",
+               main = "Specificity vs. Sensitivity of the Automatic Global Emotional Valence Measurement")
 pROC::plot.roc(roc_all$rocs[[2]], add = TRUE, print.auc = TRUE, 
-               xlim = c(1, 0), ylim = c(0,1), print.auc.y = .3, 
+               xlim = c(1, 0), ylim = c(0, 1), print.auc.y = .3, 
                print.auc.x = .9, col = "#EB9A63", 
-               print.thres = TRUE, print.thres.best.method = "youden")
+               print.thres = FALSE, print.thres.best.method = "youden")
 pROC::plot.roc(roc_all$rocs[[3]], add = TRUE, print.auc = TRUE, 
-               xlim = c(1, 0), ylim = c(0,1), print.auc.y = .75, 
+               xlim = c(1, 0), ylim = c(0, 1), print.auc.y = .75, 
                print.auc.x = .6, col = "#23979E", 
-               print.thres = TRUE, print.thres.best.method = "youden")
+               print.thres = FALSE, print.thres.best.method = "youden")
 legend("bottomright", legend = c(
-  paste0(roc_all$rocs[[1]]$levels, collapse = "-"),
-  paste0(roc_all$rocs[[2]]$levels, collapse = "-"),
-  paste0(roc_all$rocs[[3]]$levels, collapse = "-")),
+  paste0(roc_all$rocs[[1]]$levels, collapse = " vs. "),
+  paste0(roc_all$rocs[[2]]$levels, collapse = " vs. "),
+  paste0(roc_all$rocs[[3]]$levels, collapse = " vs. ")),
   col = c(par("fg"), "#EB9A63", "#23979E"), lwd = 2)
 
 # Save ROC plot.
-# ggplot2::ggsave(file = paste0("rplots/", analysis_type, "/ROC_AV_Multi.jpg"), 
-#                 plot = ggplot2::last_plot(), width = 20, height = 10, 
-#                 units = "cm", dpi = 600)
+ggplot2::ggsave(file = paste0("rplots/", analysis_type, "/ROC_AV_Multi.jpg"), 
+                 plot = ggplot2::last_plot(), width = 20, height = 10, 
+                 units = "cm", dpi = 600)
 
 # Plot Confidence Intervals 
 pROC::ci.auc(roc_all$rocs[[1]]) # negative vs. neutral
@@ -215,7 +214,7 @@ print(roc_all_8$auc)
 # Plot multi-ROC per age and facial expression pair.
 pROC::plot.roc(roc_all_4$rocs[[1]], print.auc = TRUE, 
                print.auc.y = .8, print.auc.x = .35, 
-               main = "Specificity vs. Sensitivity of the Automatic Global Emotional Valence Classifier Per Age", 
+               main = "Specificity vs. Sensitivity of the Automatic Global Emotional Valence Measurement Per Age", 
                xlim = c(1, 0), ylim = c(0,1))
 pROC::plot.roc(roc_all_4$rocs[[2]], add = TRUE, print.auc = TRUE, 
                print.auc.y = .3, print.auc.x = .9, col = "#EB9A63")
@@ -278,136 +277,190 @@ f1_neut_pos_8 <- pROC::coords(roc_all_8$rocs[[3]], "best",
 # Print F1
 (2 * (f1_neut_pos_8$precision * f1_neut_pos_8$recall))/(f1_neut_pos_8$precision + f1_neut_pos_8$recall)
 
-# AU12-Manual Valence ----
-# To what extent can we distinguish between negative < neutral  < positive based on AU12? 
+# Individual AU's-Manual Valence ----
+# To what extent can we distinguish between negative < neutral < positive based on AU12/AU20/AU3+4? 
 
 ## Multi-class ROC ----
-roc_all_AU12 <- pROC::multiclass.roc(response = data_ROC$manual_valence, 
-                                     predictor = data_ROC$AU12)
-print(roc_all_AU12$auc)
+
+# Select which AU to predict manual valence: AU12, AU20, AU3+4
+roc_all_AU <- pROC::multiclass.roc(response = data_ROC$manual_valence, 
+                                   predictor = data_ROC$AU12)
+              # pROC::multiclass.roc(response = data_ROC$manual_valence, 
+              #                       predictor = data_ROC$AU12)
+              # pROC::multiclass.roc(response = data_ROC$manual_valence, 
+              #                      predictor = data_ROC$AU20)
+
+print(roc_all_AU$auc)
 # Use print.thres = "best" to display the specificipy & sensitity thresholds.
-pROC::plot.roc(roc_all_AU12$rocs[[1]], 
+pROC::plot.roc(roc_all_AU$rocs[[1]], 
                print.auc = TRUE, print.auc.y = .8, 
-               print.auc.x = .35, print.thres = TRUE, 
+               print.auc.x = .7, print.thres = FALSE, 
                print.thres.best.method = "youden",
                main = "Specificity vs. Sensitivity Using Automatically Detected AU12", 
                xlim = c(1, 0), ylim = c(0,1))
-pROC::plot.roc(roc_all_AU12$rocs[[2]], add = TRUE, 
+pROC::plot.roc(roc_all_AU$rocs[[2]], add = TRUE, 
                print.auc = TRUE, print.auc.y = .3, 
-               print.auc.x = .9, col = "#EB9A63", 
-               print.thres = TRUE, print.thres.best.method = "youden")
-pROC::plot.roc(roc_all_AU12$rocs[[3]], add = TRUE, 
-               print.auc = TRUE, print.auc.y = .75, 
-               print.auc.x = .6, col = "#23979E", 
-               print.thres = TRUE, print.thres.best.method = "youden")
+               print.auc.x = .75, col = "#EB9A63", 
+               print.thres = FALSE, print.thres.best.method = "youden")
+pROC::plot.roc(roc_all_AU$rocs[[3]], add = TRUE, 
+               print.auc = TRUE, print.auc.y = .65, 
+               print.auc.x = .55, col = "#23979E", 
+               print.thres = FALSE, print.thres.best.method = "youden")
 legend("bottomright", legend = c(
-  paste0(roc_all_AU12$rocs[[1]]$levels, collapse = "-"),
-  paste0(roc_all_AU12$rocs[[2]]$levels, collapse = "-"),
-  paste0(roc_all_AU12$rocs[[3]]$levels, collapse = "-")),
+  paste0(roc_all_AU$rocs[[1]]$levels, collapse = " vs. "),
+  paste0(roc_all_AU$rocs[[2]]$levels, collapse = " vs. "),
+  paste0(roc_all_AU$rocs[[3]]$levels, collapse = " vs. ")),
   col = c(par("fg"), "#EB9A63", "#23979E"), lwd = 2)
 
-## Multi-class ROC: Age * AU12 ----
+## Multi-class ROC: Age * AU's ----
 
-# Multi-class ROC 4 months: AU12
-roc_all_4_AU12 <- pROC::multiclass.roc(response = data_ROC_4$manual_valence,
-                                       predictor = data_ROC_4$AU12)
-print(roc_all_4_AU12$auc)
+# Multi-class ROC 4 months: Individual AU's
+# Select which AU to predict manual valence: AU12, AU20, AU3+4
+roc_all_4_AU <- pROC::multiclass.roc(response = data_ROC_4$manual_valence,
+                                     predictor = data_ROC_4$AU3_4)
+                # pROC::multiclass.roc(response = data_ROC_4$manual_valence,
+                #                      predictor = data_ROC_4$AU12)
+                # pROC::multiclass.roc(response = data_ROC_4$manual_valence,
+                #                      predictor = data_ROC_4$AU20)
+
+# Print multi-class AUC.
+print(roc_all_4_AU$auc)
 
 # Multi-class ROC 8 months: AU12.
-roc_all_8_AU12 <- pROC::multiclass.roc(response = data_ROC_8$manual_valence, 
-                                       predictor = data_ROC_8$AU12)
-print(roc_all_8_AU12$auc)
+roc_all_8_AU <- pROC::multiclass.roc(response = data_ROC_8$manual_valence, 
+                                       predictor = data_ROC_8$AU3_4)
+                  # pROC::multiclass.roc(response = data_ROC_8$manual_valence,
+                  #                      predictor = data_ROC_8$AU20)
+                  # pROC::multiclass.roc(response = data_ROC_8$manual_valence,
+                  #                      predictor = data_ROC_8$AU3_4)
+
+# Print multi-class AUC.
+print(roc_all_8_AU$auc)
 
 # Plot multi-class ROC per age and facial expression pair.
-pROC::plot.roc(roc_all_4_AU12$rocs[[1]], print.auc = TRUE, 
-               print.auc.y = .8, print.auc.x = .35, 
-               main = "Specificity vs. Sensitivity of Automatically Detected AU12 Per Age", 
-               xlim = c(1, 0), ylim = c(0,1))
-pROC::plot.roc(roc_all_4_AU12$rocs[[2]], add = TRUE, print.auc = TRUE, 
-               print.auc.y = .3, print.auc.x = .9, col = "#EB9A63")
-pROC::plot.roc(roc_all_4_AU12$rocs[[3]], add = TRUE, print.auc = TRUE, 
-               print.auc.y = .75, print.auc.x = .6, col = "#23979E")
+pROC::plot.roc(roc_all_4_AU$rocs[[1]], print.auc = TRUE, 
+               print.auc.y = .5, print.auc.x = .35, 
+               main = "Specificity vs. Sensitivity of Automatically Detected AU20 Per Age", 
+               xlim = c(1, 0), ylim = c(0,1),
+               print.thres = FALSE, print.thres.best.method = "youden")
+pROC::plot.roc(roc_all_4_AU$rocs[[2]], add = TRUE, print.auc = TRUE, 
+               print.auc.y = .3, print.auc.x = .9, col = "#EB9A63", 
+               print.thres = FALSE, print.thres.best.method = "youden")
+pROC::plot.roc(roc_all_4_AU$rocs[[3]], add = TRUE, print.auc = TRUE, 
+               print.auc.y = .75, print.auc.x = .6, col = "#23979E", 
+               print.thres = FALSE, print.thres.best.method = "youden")
 legend("bottomright", legend = c(
-  paste0(roc_all_4_AU12$rocs[[1]]$levels, collapse = "-"),
-  paste0(roc_all_4_AU12$rocs[[2]]$levels, collapse = "-"),
-  paste0(roc_all_4_AU12$rocs[[3]]$levels, collapse = "-")),
+  paste0(roc_all_4_AU$rocs[[1]]$levels, collapse = "-"),
+  paste0(roc_all_4_AU$rocs[[2]]$levels, collapse = "-"),
+  paste0(roc_all_4_AU$rocs[[3]]$levels, collapse = "-")),
   col = c(par("fg"), "#EB9A63", "#23979E"), lwd = 2)
-pROC::plot.roc(roc_all_8_AU12$rocs[[1]], add = TRUE, print.auc = TRUE,
+pROC::plot.roc(roc_all_8_AU$rocs[[1]], add = TRUE, print.auc = TRUE,
                print.auc.y = .85, print.auc.x = .35,
-               xlim = c(1, 0), ylim = c(0,1))
-pROC::plot.roc(roc_all_8_AU12$rocs[[2]], add = TRUE, print.auc = TRUE,
-               print.auc.y = .35, print.auc.x = .9, col = "#EB9A63")
-pROC::plot.roc(roc_all_8_AU12$rocs[[3]], add = TRUE, print.auc = TRUE,
-               print.auc.y = .79, print.auc.x = .6, col = "#23979E")
+               xlim = c(1, 0), ylim = c(0,1), 
+               print.thres = FALSE, print.thres.best.method = "youden")
+pROC::plot.roc(roc_all_8_AU$rocs[[2]], add = TRUE, print.auc = TRUE,
+               print.auc.y = .35, print.auc.x = .9, col = "#EB9A63", 
+               print.thres = FALSE, print.thres.best.method = "youden")
+pROC::plot.roc(roc_all_8_AU$rocs[[3]], add = TRUE, print.auc = TRUE,
+               print.auc.y = .79, print.auc.x = .6, col = "#23979E", 
+               print.thres = T, print.thres.best.method = "youden")
 legend("bottomright", legend = c(
-  paste0(roc_all_8$rocs[[1]]$levels, collapse = "-"),
-  paste0(roc_all_8$rocs[[2]]$levels, collapse = "-"),
-  paste0(roc_all_8$rocs[[3]]$levels, collapse = "-")),
+  paste0(roc_all_8$rocs[[1]]$levels, collapse = " vs. "),
+  paste0(roc_all_8$rocs[[2]]$levels, collapse = " vs. "),
+  paste0(roc_all_8$rocs[[3]]$levels, collapse = " vs. ")),
   col = c(par("fg"), "#EB9A63", "#23979E"), lwd = 2)
 
 # Plot Confidence Intervals: 4 Months 
-pROC::ci.auc(roc_all_4_AU12$rocs[[1]]) # negative vs. neutral
-pROC::ci.auc(roc_all_4_AU12$rocs[[2]]) # negative vs. positive 
-pROC::ci.auc(roc_all_4_AU12$rocs[[3]]) # neutral vs. positive 
+pROC::ci.auc(roc_all_4_AU$rocs[[1]]) # negative vs. neutral
+pROC::ci.auc(roc_all_4_AU$rocs[[2]]) # negative vs. positive 
+pROC::ci.auc(roc_all_4_AU$rocs[[3]]) # neutral vs. positive 
 
 # Plot Confidence Intervals: 8 Months 
-pROC::ci.auc(roc_all_8_AU12$rocs[[1]]) # negative vs. neutral
-pROC::ci.auc(roc_all_8_AU12$rocs[[2]]) # negative vs. positive 
-pROC::ci.auc(roc_all_8_AU12$rocs[[3]]) # neutral vs. positive 
+pROC::ci.auc(roc_all_8_AU$rocs[[1]]) # negative vs. neutral
+pROC::ci.auc(roc_all_8_AU$rocs[[2]]) # negative vs. positive 
+pROC::ci.auc(roc_all_8_AU$rocs[[3]]) # neutral vs. positive 
 
 ## Compute F1 Scores per Age ----
 
-# Compute F1 for AU12 at 4 Months
+# Compute F1 for individual AU's Overall 
+print(roc_all_AU)
 # Get precision and recall values at the best threshold value: negative vs. neutral
-f1_neg_neut_4_AU12 <- pROC::coords(roc_all_4_AU12$rocs[[1]], "best", 
-                                   ret = c("threshold", "precision", "recall")) 
+f1_neg_neut_AU <- pROC::coords(roc_all_AU$rocs[[1]], "best", 
+                               ret = c("threshold", "precision", "recall")) 
 # Print F1
-(2 * (f1_neg_neut_4_AU12$precision * f1_neg_neut_4_AU12$recall))/(f1_neg_neut_4_AU12$precision + f1_neg_neut_4_AU12$recall)
+(2 * (f1_neg_neut_AU$precision * f1_neg_neut_AU$recall))/(f1_neg_neut_AU$precision + f1_neg_neut_AU$recall)
 
 # Get precision and recall values at the best threshold value: negative vs. positive
-f1_neg_pos_4_AU12 <- pROC::coords(roc_all_4_AU12$rocs[[2]], "best",
-                                  ret = c("threshold", "precision", "recall"))
+f1_neg_pos_AU <- pROC::coords(roc_all_AU$rocs[[2]], "best",
+                              ret = c("threshold", "precision", "recall"))
 # Print F1
-(2 * (f1_neg_pos_4_AU12$precision * f1_neg_pos_4_AU12$recall))/(f1_neg_pos_4_AU12$precision + f1_neg_pos_4_AU12$recall)
+(2 * (f1_neg_pos_AU$precision * f1_neg_pos_AU$recall))/(f1_neg_pos_AU$precision + f1_neg_pos_AU$recall)
 
 # Get precision and recall values at the best threshold value: neutral vs. positive
-f1_neut_pos_4_AU12 <- pROC::coords(roc_all_4_AU12$rocs[[3]], "best",
-                                   ret = c("threshold", "precision", "recall"))
+f1_neut_pos_AU <- pROC::coords(roc_all_AU$rocs[[3]], "best",
+                               ret = c("threshold", "precision", "recall"))
 # Print F1
-(2 * (f1_neut_pos_4_AU12$precision * f1_neut_pos_4_AU12$recall))/(f1_neut_pos_4_AU12$precision + f1_neut_pos_4_AU12$recall)
+(2 * (f1_neut_pos_AU$precision * f1_neut_pos_AU$recall))/(f1_neut_pos_AU$precision + f1_neut_pos_AU$recall)
 
-
-# Compute F1 for AU12 at 8 Months
+# Compute F1 for individual AU's: positive vs. negative/neutral
+print(roc_all_4_AU)
+# Compute F1 for individual AU's at 4 Months
 # Get precision and recall values at the best threshold value: negative vs. neutral
-f1_neg_neut_8_AU12 <- pROC::coords(roc_all_8_AU12$rocs[[1]], "best",
-                                   ret = c("threshold", "precision", "recall")) 
+f1_neg_neut_4_AU <- pROC::coords(roc_all_4_AU$rocs[[1]], "best", 
+                                 ret = c("threshold", "precision", "recall")) 
 # Print F1
-(2 * (f1_neg_neut_8_AU12$precision * f1_neg_neut_8_AU12$recall))/(f1_neg_neut_8_AU12$precision + f1_neg_neut_8_AU12$recall)
+(2 * (f1_neg_neut_4_AU$precision * f1_neg_neut_4_AU$recall))/(f1_neg_neut_4_AU$precision + f1_neg_neut_4_AU$recall)
 
 # Get precision and recall values at the best threshold value: negative vs. positive
-f1_neg_pos_8_AU12 <- pROC::coords(roc_all_8_AU12$rocs[[2]], "best",
-                                  ret = c("threshold", "precision", "recall"))
+f1_neg_pos_4_AU <- pROC::coords(roc_all_4_AU$rocs[[2]], "best",
+                                ret = c("threshold", "precision", "recall"))
 # Print F1
-(2 * (f1_neg_pos_8_AU12$precision * f1_neg_pos_8_AU12$recall))/(f1_neg_pos_8_AU12$precision + f1_neg_pos_8_AU12$recall)
+(2 * (f1_neg_pos_4_AU$precision * f1_neg_pos_4_AU$recall))/(f1_neg_pos_4_AU$precision + f1_neg_pos_4_AU$recall)
 
 # Get precision and recall values at the best threshold value: neutral vs. positive
-f1_neut_pos_8_AU12 <- pROC::coords(roc_all_8_AU12$rocs[[3]], "best",
+f1_neut_pos_4_AU <- pROC::coords(roc_all_4_AU$rocs[[3]], "best",
                                    ret = c("threshold", "precision", "recall"))
 # Print F1
-(2 * (f1_neut_pos_8_AU12$precision * f1_neut_pos_8_AU12$recall))/(f1_neut_pos_8_AU12$precision + f1_neut_pos_8_AU12$recall)
+(2 * (f1_neut_pos_4_AU$precision * f1_neut_pos_4_AU$recall))/(f1_neut_pos_4_AU$precision + f1_neut_pos_4_AU$recall)
 
-## Video-level ROCs: AU12 * Age  ----
+
+# Compute F1 for individual AU's at 8 Months
+print(roc_all_8_AU)
+# Get precision and recall values at the best threshold value: negative vs. neutral
+f1_neg_neut_8_AU <- pROC::coords(roc_all_8_AU$rocs[[1]], "best",
+                                 ret = c("threshold", "precision", "recall")) 
+# Print F1
+(2 * (f1_neg_neut_8_AU$precision * f1_neg_neut_8_AU$recall))/(f1_neg_neut_8_AU$precision + f1_neg_neut_8_AU$recall)
+
+# Get precision and recall values at the best threshold value: negative vs. positive
+f1_neg_pos_8_AU <- pROC::coords(roc_all_8_AU$rocs[[2]], "best",
+                                ret = c("threshold", "precision", "recall"))
+# Print F1
+(2 * (f1_neg_pos_8_AU$precision * f1_neg_pos_8_AU$recall))/(f1_neg_pos_8_AU$precision + f1_neg_pos_8_AU$recall)
+
+# Get precision and recall values at the best threshold value: neutral vs. positive
+f1_neut_pos_8_AU <- pROC::coords(roc_all_8_AU$rocs[[3]], "best",
+                                   ret = c("threshold", "precision", "recall"))
+# Print F1
+(2 * (f1_neut_pos_8_AU$precision * f1_neut_pos_8_AU$recall))/(f1_neut_pos_8_AU$precision + f1_neut_pos_8_AU$recall)
+
+## Video-level ROCs: Individual AU's * Age  ----
 
 # Perform ROC on pp who display more than 1 manually coded FE categories (required for the analysis).
-data_ROC_AU12  <- data_ROC %>% 
+data_ROC_AU <- data_ROC %>% 
   dplyr::group_by(participant_id, age, int_partner_join) %>% 
   dplyr::filter(dplyr::n_distinct(manual_valence) > 2) %>%
+  # Select which AU should predict manual valence:
   dplyr::mutate(auc = as.numeric(pROC::multiclass.roc(response = manual_valence, 
                                                       predictor = AU12)$auc)) %>%
+  # dplyr::mutate(auc = as.numeric(pROC::multiclass.roc(response = manual_valence, 
+  #                                                     predictor = AU20)$auc)) %>%
+  # dplyr::mutate(auc = as.numeric(pROC::multiclass.roc(response = manual_valence, 
+  #                                                     predictor = AU3_4)$auc)) %>%
   dplyr::ungroup()
 
 # Summarize per video: the AUC, mean and SD video quality, number rows analyzed.
-data_ROC_AU12 <- data_ROC_AU12 %>% 
+data_ROC_AU <- data_ROC_AU %>% 
   dplyr::group_by(participant_id, age, int_partner_join) %>%
   dplyr::summarize(auc = dplyr::first(auc), 
                    video_quality_mean = mean(video_quality), 
@@ -415,17 +468,19 @@ data_ROC_AU12 <- data_ROC_AU12 %>%
                    n = dplyr::n(), .groups = 'drop') 
 
 # Save datafile.
-readr::write_csv2(data_ROC_AU12, 
+readr::write_csv2(data_ROC_AU, 
                   file = paste0("output/", analysis_type, "/roc_analysis/data_ROC_AU12.csv"))
+                  #file = paste0("output/", analysis_type, "/roc_analysis/data_ROC_AU20.csv"))
+                  #file = paste0("output/", analysis_type, "/roc_analysis/data_ROC_AU3_4.csv"))
 
 # Print mean & SD AUC per video.
-data_ROC_AU12 %>%
+data_ROC_AU %>%
   dplyr::summarize(mean_auc = mean(auc), sd_auc = sd(auc)) %>%
   View(., title = "Mean & SD AUC per video")
 
 # Binary ROC Analysis ----
 
-## ROC: Positive vs. Rest ----
+## ROC: Positive vs. Negative/Neutral: Automatic Valence ----
 
 # Prepare the dataset: Filter out data that was manually coded as "Not Visible" &
 # recode the levels of the manual_valence variable. 
@@ -433,14 +488,50 @@ data_ROC_pos <- data %>%
   dplyr::filter(FE_category != "Not Visible") %>%
   # Recode FE_category into "positive" vs "rest"
   dplyr::mutate(manual_valence = droplevels(recode_factor(FE_category, 
-                                                          `Negative` = "rest", 
-                                                          `Neutral` = "rest", 
-                                                          `Positive` = "positive")), 
-                automatic_valence = valence)
+                                                          `Negative` = "Negative/Neutral", 
+                                                          `Neutral` = "Negative/Neutral", 
+                                                          `Positive` = "Positive")), 
+                automatic_valence = valence) 
+
+# Nest the data within video
+f1_pos_rest <- data_ROC_pos %>%
+  dplyr::group_by(participant_id, age, int_partner_join) %>% 
+  # Filter out infants who do not display both manually coded facial expressions 
+  dplyr::filter(dplyr::n_distinct(manual_valence) > 1)
+# Perform a binary ROC
+f1_pos_rest <-  pROC::multiclass.roc(response = f1_pos_rest$manual_valence,
+                          predictor = f1_pos_rest$automatic_valence,
+                          direction = ">", 
+                          levels = c("Positive", "Negative/Neutral"))
+
+# Plot the binary ROC curve for positive vs rest and the curve for negative vs. neutral
+pROC::plot.roc(f1_pos_rest$rocs[[1]], print.auc = TRUE, 
+               print.auc.y = .75, print.auc.x = .6, col = "#23979E", 
+               xlim = c(1, 0), ylim = c(0, 1), 
+               print.thres = FALSE, print.thres.best.method = "youden",
+               main = "Specificity vs. Sensitivity of the Automatic Global Emotional Valence Measurement")
+pROC::plot.roc(roc_all$rocs[[1]], add = TRUE, print.auc = TRUE, 
+               print.auc.y = .3, print.auc.x = .6, col = "#EB9A63", 
+               xlim = c(1, 0), ylim = c(0, 1),
+               print.thres = FALSE, print.thres.best.method = "youden")
+legend("bottomright", 
+       legend = c(
+         paste0(f1_pos_rest$rocs[[1]]$levels, collapse = " vs. "),
+         paste0(roc_all$rocs[[1]]$levels, collapse = " vs. ")),
+       col = c("#23979E", "#EB9A63"), lwd = 2)
+
+# Get precision and recall values at the best threshold value: positive vs. rest
+f1_pos_rest <- pROC::coords(f1_pos_rest$rocs[[1]], "best", 
+               ret = c("threshold", "precision", "recall", "specificity"))
+
+# Print F1
+(2 * (f1_pos_rest$precision * f1_pos_rest$recall))/(f1_pos_rest$precision + f1_pos_rest$recall)
 
 # Perform ROC on pp who display more than 1 manually coded FE categories.
 data_ROC_pos <- data_ROC_pos %>% 
+  # Nest the data within video
   dplyr::group_by(participant_id, age, int_partner_join) %>% 
+  # Filter out infants who do not display both manually coded facial expressions 
   dplyr::filter(dplyr::n_distinct(manual_valence) > 1) %>%
   dplyr::mutate(auc = as.numeric(pROC::multiclass.roc(response = manual_valence,
                                                       predictor = automatic_valence,
@@ -464,19 +555,99 @@ data_ROC_pos %>%
   dplyr::summarize(mean_auc = mean(auc), sd_auc = sd(auc)) %>%
   View(., title = "Mean & SD AUC per video")
 
-## ROC: Negative vs. Rest ----
+
+## ROC: Positive vs. Negative/Nuetral AU12 ----
+
+# Prepare the dataset: Filter out data that was manually coded as "Not Visible" &
+# recode the levels of the manual_valence variable. 
+data_ROC_pos_AU12 <- data %>% 
+  dplyr::filter(FE_category != "Not Visible") %>%
+  # Recode FE_category into "positive" vs "rest"
+  dplyr::mutate(manual_valence = droplevels(recode_factor(FE_category, 
+                                                          `Negative` = "Negative/Neutral", 
+                                                          `Neutral` = "Negative/Neutral", 
+                                                          `Positive` = "Positive"))) 
+
+# Nest the data within video
+f1_pos_rest_AU12 <- data_ROC_pos_AU12 %>%
+  dplyr::group_by(participant_id, age, int_partner_join) %>% 
+  # Filter out infants who do not display both manually coded facial expressions 
+  dplyr::filter(dplyr::n_distinct(manual_valence) > 1)
+# Perform a binary ROC
+f1_pos_rest_AU12 <-  pROC::multiclass.roc(response = f1_pos_rest_AU12$manual_valence,
+                                     predictor = f1_pos_rest_AU12$AU12,
+                                     direction = ">", 
+                                     levels = c("Positive", "Negative/Neutral"))
+
+# Plot the binary ROC curve for positive vs rest and the curve for negative vs. neutral
+pROC::plot.roc(f1_pos_rest_AU12$rocs[[1]], print.auc = TRUE, 
+               print.auc.y = .75, print.auc.x = .6, col = "#23979E", 
+               xlim = c(1, 0), ylim = c(0, 1), 
+               print.thres = FALSE, print.thres.best.method = "youden",
+               main = "Specificity vs. Sensitivity of the Automatic AU12 Measurement")
+pROC::plot.roc(roc_all_AU$rocs[[1]], add = TRUE,
+               print.auc = TRUE, print.auc.y = .3,
+               print.auc.x = .9, col = "#EB9A63",
+               print.thres = FALSE, print.thres.best.method = "youden")
+legend("bottomright", 
+       legend = c(
+         paste0(f1_pos_rest_AU12$rocs[[1]]$levels, collapse = " vs. "),
+         paste0(roc_all_AU$rocs[[1]]$levels, collapse = " vs. ")),
+       col = c("#23979E", "#EB9A63"), lwd = 2)
+
+# Get precision and recall values at the best threshold value: positive vs. rest
+f1_pos_rest_AU12 <- pROC::coords(f1_pos_rest_AU12$rocs[[1]], "best", 
+                            ret = c("threshold", "precision", "recall", "specificity"))
+
+# Print F1
+(2 * (f1_pos_rest_AU12$precision * f1_pos_rest_AU12$recall))/(f1_pos_rest_AU12$precision + f1_pos_rest_AU12$recall)
+
+## ROC: Negative vs. Neutral ----
 
 # Prepare the dataset: Filter out data that was manually coded as "Not Visible" &
 # recode the levels of the manual_valence variable. 
 data_ROC_neg <- data %>% 
-  dplyr::filter(FE_category != "Not Visible") %>%
+  dplyr::filter(FE_category != "Not Visible" & FE_category != "Positive") %>%
   # negative vs rest
   dplyr::mutate(manual_valence = base::droplevels(dplyr::recode_factor(
                                                     FE_category, 
-                                                   `Negative` = "negative", 
-                                                   `Neutral` = "rest", 
-                                                   `Positive` = "rest")), 
+                                                   `Negative` = "Negative", 
+                                                   `Neutral` = "Neutral")), 
                 automatic_valence = valence)
+
+# Nest the data within video
+f1_neg_neut <- data_ROC_neg %>%
+  dplyr::group_by(participant_id, age, int_partner_join) %>% 
+  # Filter out infants who do not display both manually coded facial expressions 
+  dplyr::filter(dplyr::n_distinct(manual_valence) > 1)
+# Perform a binary ROC
+f1_neg_neut <-  pROC::multiclass.roc(response = f1_neg_neut$manual_valence,
+                                     predictor = f1_neg_neut$automatic_valence,
+                                     direction = "<", 
+                                     levels = c("Negative", "Neutral"))
+
+# Plot the binary ROC curves for positive vs rest and negative vs rest
+pROC::plot.roc(f1_pos_rest$rocs[[1]], print.auc = TRUE, 
+               print.auc.y = .75, print.auc.x = .6, col = "#23979E", 
+               xlim = c(1, 0), ylim = c(0, 1), 
+               print.thres = FALSE, print.thres.best.method = "youden",
+               main = "Specificity vs. Sensitivity of the Automatic Global Emotional Valence Measurement")
+pROC::plot.roc(f1_neg_neut$rocs[[1]], add = TRUE, print.auc = TRUE, 
+               print.auc.y = .3, print.auc.x = .6, col = "#EB9A63", 
+               xlim = c(1, 0), ylim = c(0, 1),
+               print.thres = FALSE, print.thres.best.method = "youden")
+legend("bottomright", 
+       legend = c(
+         paste0(f1_pos_rest$rocs[[1]]$levels, collapse = "-"),
+         paste0(f1_neg_neut$rocs[[1]]$levels, collapse = "-")),
+       col = c("#23979E", "#EB9A63"), lwd = 2)
+
+# Get precision and recall values at the best threshold value: positive vs. rest
+f1_neg_neut <- pROC::coords(f1_neg_neut$rocs[[1]], "best", 
+                            ret = c("threshold", "precision", "recall", "specificity"))
+
+# Print F1
+(2 * (f1_neg_neut$precision * f1_neg_neut$recall))/(f1_neg_neut$precision + f1_neg_neut$recall)
 
 # Perform ROC on pp who display more than 1 manually coded FE categories.
 data_ROC_neg  <- data_ROC_neg %>% 
@@ -491,7 +662,6 @@ data_ROC_neg  <- data_ROC_neg %>%
 saveRDS(data_ROC_neg, 
         file = paste0("output/", analysis_type, "/roc_analysis/data_ROC_neg.rds"))
 
-
 # Summarize per video: the AUC, mean and SD video quality, number rows analyzed.
 data_ROC_neg <- data_ROC_neg %>% 
   dplyr::group_by(participant_id, age, int_partner_join) %>%
@@ -504,6 +674,57 @@ data_ROC_neg <- data_ROC_neg %>%
 data_ROC_neg %>%
   dplyr::summarize(mean_auc = mean(auc), sd_auc = sd(auc)) %>%
   View(., title = "Mean & SD AUC per video")
+
+## ROC: Negative vs. Neutral AU20/AU3+4 ----
+
+# Prepare the dataset: Filter out data that was manually coded as "Not Visible" &
+# recode the levels of the manual_valence variable. 
+data_ROC_neg_AU <- data %>% 
+  dplyr::filter(FE_category != "Not Visible") %>%
+  # Recode FE_category into "positive" vs "rest"
+  dplyr::mutate(manual_valence = droplevels(recode_factor(FE_category, 
+                                                          `Negative` = "Negative", 
+                                                          `Neutral` = "Neutral", 
+                                                          `Positive` = "Negative"))) 
+
+# Nest the data within video
+f1_neg_neut_AU <- data_ROC_neg_AU %>%
+  dplyr::group_by(participant_id, age, int_partner_join) %>% 
+  # Filter out infants who do not display both manually coded facial expressions 
+  dplyr::filter(dplyr::n_distinct(manual_valence) > 1)
+# Perform a binary ROC
+f1_neg_neut_AU <- pROC::multiclass.roc(response = f1_neg_neut_AU$manual_valence,
+                                        predictor = f1_neg_neut_AU$AU20,
+                                        direction = ">", 
+                                        levels = c("Negative", "Neutral", "Positive"))
+
+# Plot the binary ROC curve for positive vs rest and the curve for negative vs. neutral
+pROC::plot.roc(f1_neg_neut_AU$rocs[[1]], print.auc = TRUE, 
+               print.auc.y = .8, print.auc.x = .6, 
+               xlim = c(1, 0), ylim = c(0, 1), col = "#23979E",
+               print.thres = TRUE, print.thres.best.method = "youden",
+               main = "Specificity vs. Sensitivity of the Automatic AU20 Measurement")
+pROC::plot.roc(f1_neg_neut_AU$rocs[[2]], add = TRUE, 
+               print.auc = TRUE, print.auc.y = .3, 
+               print.auc.x = .9, col = "#EB9A63", 
+               print.thres = TRUE, print.thres.best.method = "youden")
+pROC::plot.roc(f1_neg_neut_AU$rocs[[3]], add = TRUE, 
+               print.auc = TRUE, print.auc.y = .75, 
+               print.auc.x = .6, col = "#23979E", 
+               print.thres = TRUE, print.thres.best.method = "youden")
+legend("bottomright", 
+       legend = c(
+       paste0(f1_neg_neut_AU$rocs[[1]]$levels, collapse = " vs. "),
+       paste0(f1_neg_neut_AU$rocs[[2]]$levels, collapse = " vs. "), 
+       paste0(f1_neg_neut_AU$rocs[[3]]$levels, collapse = " vs. ")),
+       col = c(par("fg"), "#EB9A63", "#23979E"), lwd = 2)
+
+# Get precision and recall values at the best threshold value: negative vs. neutral
+f1_neg_neut_AU <- pROC::coords(f1_neg_neut_AU$rocs[[1]], "best", 
+                               ret = c("threshold", "precision", "recall", "specificity"))
+
+# Print F1
+(2 * (f1_neg_neut_AU$precision * f1_neg_neut_AU$recall))/(f1_neg_neut_AU$precision + f1_neg_neut_AU$recall)
 
 # Age, Interaction Partner, Face Model Fit Quality ----
 
@@ -544,7 +765,6 @@ data_ROC_pos_long <- data_ROC_pos %>%
 readr::write_csv2(data_ROC_pos_long, 
                   file = paste0("output/", analysis_type, "/roc_analysis/data_ROC_pos_long.csv"), 
                   na = "NA")
-
 
 # Recode from long to wide data format.
 data_ROC_pos_wide <- data_ROC_pos %>%

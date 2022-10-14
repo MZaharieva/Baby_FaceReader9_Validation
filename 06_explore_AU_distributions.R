@@ -106,6 +106,26 @@ plot_age <- data_mlr %>%
   dplyr::summarise(dplyr::across(dplyr::starts_with("AU"), mean)) %>%
   dplyr::ungroup()
 
+# Positive AU's
+plot_age_pos <- data_mlr %>% 
+  dplyr::mutate(age = dplyr::recode_factor(age, 
+                                           `4` = "4 Months",
+                                           `8` = "8 Months")) %>%
+  dplyr::select(participant_id, age, manual_valence, AU12, AU6, AU25, AU26, AU27) %>%
+  dplyr::group_by(age, manual_valence) %>%
+  dplyr::summarise(dplyr::across(dplyr::starts_with("AU"), mean)) %>%
+  dplyr::ungroup()
+
+# Negative AU's
+plot_age_neg <- data_mlr %>% 
+  dplyr::mutate(age = dplyr::recode_factor(age, 
+                                           `4` = "4 Months",
+                                           `8` = "8 Months")) %>%
+  dplyr::select(participant_id, age, manual_valence, AU20, AU17, AU3_4, AU6, AU7, AU25, AU26, AU27) %>%
+  dplyr::group_by(age, manual_valence) %>%
+  dplyr::summarise(dplyr::across(dplyr::starts_with("AU"), mean)) %>%
+  dplyr::ungroup()
+
 ## Aggregate plot data per interaction partner ----
 plot_int_partner <- data_mlr %>% 
   dplyr::mutate(int_partner = dplyr::recode_factor(int_partner, 
@@ -126,6 +146,18 @@ x_tick <- base::match(c("AU12", "AU6", "AU25",
 # Remove missing values
 x_tick <- stats::na.omit(x_tick)
 
+# Apriori positive AU's tick marks
+x_tick_pos <- base::match(c("AU12", "AU6", "AU25",
+                        "AU26", "AU27"), base::names(plot_age_pos))
+# Remove missing values
+x_tick_pos <- stats::na.omit(x_tick_pos)
+
+# Apriori negative AU's tick marks
+x_tick_neg <- base::match(c("AU20", "AU17", "AU3_4", "AU6", "AU7", 
+                            "AU25", "AU26", "AU27"), base::names(plot_age_neg))
+# Remove missing values
+x_tick_neg <- stats::na.omit(x_tick_neg)
+
 # Other AU's tick marks
 x_tick_rest <- base::match(c("AU1", "AU2", "AU5",
                              "AU43", "AU9", "AU10",
@@ -136,8 +168,10 @@ x_tick_rest <- stats::na.omit(x_tick_rest)
 
 # Plot Apriori AU's * Age ----
 
+## Positive AU's ----
+
 # Prepare plot data.
-plot_AU_df <- plot_age
+plot_AU_df <- plot_age_pos 
 
 # Plot.
 plot_AU_df <- plot_AU_df %>% 
@@ -146,10 +180,10 @@ plot_AU_df <- plot_AU_df %>%
                                                       `neutral` = "Neutral",
                                                       `positive` = "Positive")) %>%
   GGally::ggparcoord(.,
-                     columns = x_tick, 
+                     columns = x_tick_pos, 
                      groupColumn = "manual_valence", 
                      showPoints = FALSE, 
-                     title = "Action Unit Activation Intensity per Facial Expression Category",
+                     title = "Positive Action Unit Activation Intensity per Facial Expression Category",
                      alphaLines = 1,
                      scale = "globalminmax") +
   ggplot2::labs(y = element_text("Mean Activation Intensity"), 
@@ -168,12 +202,10 @@ plot_AU_df <- plot_AU_df %>%
   ggplot2::ylim(0, 1) +
   ggplot2::scale_x_discrete(
     labels = c("AU12 \nLip Corner Puller", "AU6 \nCheek Raiser", "AU25 \nLips Part", 
-               "AU26 \nJaw Drop", "AU27 \nMouth Stretch", "AU17 \nChin Raiser", 
-               "AU20 \nLip Stretcher", "AU3 & AU4 \nBrow Knitting & Knotting", 
-               "AU7 \nLid Tightener")) 
+               "AU26 \nJaw Drop", "AU27 \nMouth Stretch")) 
 
 # Make sure that the mapping of interaction partner is correct (and not jumbled by ggparcoord)
-plot_AU_df$data <- plot_age %>%
+plot_AU_df$data <- plot_age_pos %>%
   dplyr::select(age) %>%
   dplyr::mutate(`.ID` = base::factor(dplyr::row_number())) %>%
   dplyr::left_join(dplyr::select(plot_AU_df$data, -age), ., by = '.ID')
@@ -184,8 +216,62 @@ AU_age <- plot_AU_df +
   ggplot2::scale_shape_manual(name = "Age", values = c(17, 15))
 
 # Save plot.
-ggplot2::ggsave(file = paste0("rplots/", analysis_type, "/AU_Age.jpg"),
-       plot = AU_age, width = 46, height = 20, units = "cm", dpi = 600)
+ggplot2::ggsave(file = paste0("rplots/", analysis_type, "/Positive_AU_Age.jpg"),
+       plot = AU_age, width = 40, height = 20, units = "cm", dpi = 600)
+
+## Negative AU's ----
+
+# Prepare plot data.
+plot_AU_df <- plot_age_neg
+
+# Plot.
+plot_AU_df <- plot_AU_df %>% 
+  dplyr::mutate(manual_valence = dplyr::recode_factor(manual_valence, 
+                                                      `negative` = "Negative",
+                                                      `neutral` = "Neutral",
+                                                      `positive` = "Positive")) %>%
+  GGally::ggparcoord(.,
+                     columns = x_tick_neg, 
+                     groupColumn = "manual_valence", 
+                     showPoints = FALSE, 
+                     title = "Negative Action Unit Activation Intensity per Facial Expression Category",
+                     alphaLines = 1,
+                     scale = "globalminmax") +
+  ggplot2::labs(y = element_text("Mean Activation Intensity"), 
+                x = element_text("Automatically Detected Action Units"), 
+                color = 'Manually Coded \nFacial Expression',  
+                shape = 'Age') +
+  viridis::scale_color_viridis(discrete = TRUE) +
+  hrbrthemes::theme_ipsum()+
+  ggplot2::theme(plot.title = element_text(size = 14, hjust = 0.5, margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")), 
+                 axis.title.y = element_text(size = 14, angle = 90, hjust = 0.5), 
+                 axis.title.x = element_text(size = 14, angle = 0, hjust = 0.5), 
+                 axis.text.y = element_text(size = 14, vjust = 0.25), 
+                 plot.margin = unit(c(1, 1, 1, 1), "cm"),
+                 legend.text = element_text(size = 14), 
+                 legend.title = element_text(size = 14)) + 
+  ggplot2::ylim(0, 1) +
+  ggplot2::scale_x_discrete(
+    labels = c("AU20 \nLip Stretcher", "AU17 \nChin Raiser", 
+               "AU3 & AU4 \nBrow Knitting & Knotting",
+               "AU6 \nCheek Raiser", "AU7 \nLid Tightener", 
+               "AU25 \nLips Part", "AU26 \nJaw Drop", 
+               "AU27 \nMouth Stretch")) 
+
+# Make sure that the mapping of interaction partner is correct (and not jumbled by ggparcoord)
+plot_AU_df$data <- plot_age_neg %>%
+  dplyr::select(age) %>%
+  dplyr::mutate(`.ID` = base::factor(dplyr::row_number())) %>%
+  dplyr::left_join(dplyr::select(plot_AU_df$data, -age), ., by = '.ID')
+
+# Final plot.
+AU_age <- plot_AU_df + 
+  ggplot2::geom_point(aes(shape = age), size = 4) + 
+  ggplot2::scale_shape_manual(name = "Age", values = c(17, 15))
+
+# Save plot.
+ggplot2::ggsave(file = paste0("rplots/", analysis_type, "/Negative_AU_Age.jpg"),
+                plot = AU_age, width = 40, height = 20, units = "cm", dpi = 600)
 
 # Plot Apriori AU's * Age * Interaction Partner ----
 
@@ -730,9 +816,9 @@ BFR_OBXT_valid_data %>%
   ggplot2::scale_fill_viridis_d(name = "AU3+4 (Brow Knitting \n& \nKnotting)", 
                                 option = "C", alpha = 0.7, 
                                 direction = -1) +
-  ggplot2::labs(title = 'AU3+4 Distribution per Age and Interaction Partner', 
+  ggplot2::labs(title = 'AU3+4 Distribution per Age', 
                 x = 'AU3+4',  y = 'Manually Coded Facial Expression Category') + 
-  ggplot2::xlim(0, 1) +
+  ggplot2::xlim(0, 0.4) +
   ggplot2::theme(panel.spacing = unit(0.5, "lines"), 
                  strip.text.x = element_text(size = 14),
                  plot.title = element_text(hjust = 0.5, margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")),
