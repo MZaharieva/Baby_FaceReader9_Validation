@@ -602,6 +602,49 @@ f1_pos_rest_AU12 <- pROC::coords(f1_pos_rest_AU12$rocs[[1]], "best",
 # Print F1
 (2 * (f1_pos_rest_AU12$precision * f1_pos_rest_AU12$recall))/(f1_pos_rest_AU12$precision + f1_pos_rest_AU12$recall)
 
+## ROC: Negative vs. Neutral/Positive: Automatic Valence ----
+
+# Prepare the dataset: Filter out data that was manually coded as "Not Visible" &
+# recode the levels of the manual_valence variable. 
+data_ROC_neg <- data %>% 
+  dplyr::filter(FE_category != "Not Visible") %>%
+  # Recode FE_category into "positive" vs "rest"
+  dplyr::mutate(manual_valence = droplevels(recode_factor(FE_category, 
+                                                          `Negative` = "Negative", 
+                                                          `Neutral` = "Neutral/Positive", 
+                                                          `Positive` = "Neutral/Positive")), 
+                automatic_valence = valence) 
+
+# Nest the data within video
+f1_neg_rest <- data_ROC_neg %>%
+  dplyr::group_by(participant_id, age, int_partner_join) %>% 
+  # Filter out infants who do not display both manually coded facial expressions 
+  dplyr::filter(dplyr::n_distinct(manual_valence) > 1)
+# Perform a binary ROC
+f1_neg_rest <-  pROC::multiclass.roc(response = f1_neg_rest$manual_valence,
+                                     predictor = f1_neg_rest$automatic_valence,
+                                     direction = "<", 
+                                     levels = c("Negative", "Neutral/Positive"))
+
+
+# Get precision and recall values at the best threshold value: positive vs. rest
+f1_neg_rest <- pROC::coords(f1_neg_rest$rocs[[1]], "best", 
+                            ret = c("threshold", "precision", "recall", "specificity"))
+
+# Print F1
+(2 * (f1_neg_rest$precision * f1_neg_rest$recall))/(f1_neg_rest$precision + f1_neg_rest$recall)
+
+# Perform ROC on pp who display more than 1 manually coded FE categories.
+data_ROC_neg <- data_ROC_neg %>% 
+  # Nest the data within video
+  dplyr::group_by(participant_id, age, int_partner_join) %>% 
+  # Filter out infants who do not display both manually coded facial expressions 
+  dplyr::filter(dplyr::n_distinct(manual_valence) > 1) %>%
+  dplyr::mutate(auc = as.numeric(pROC::multiclass.roc(response = manual_valence,
+                                                      predictor = automatic_valence,
+                                                      direction = "<")$auc)) %>%
+  dplyr::ungroup()
+
 ## ROC: Negative vs. Neutral ----
 
 # Prepare the dataset: Filter out data that was manually coded as "Not Visible" &
@@ -980,6 +1023,54 @@ roc_manual_manual <- roc_manual_manual %>%
   dplyr::summarize(auc = dplyr::first(auc), 
             auc_sd = sd(auc),
             n = dplyr::n(), .groups = 'drop') 
+
+# ROC Power ----
+
+## Positive vs Negative/Neurtal ----
+# rocobj <- pROC::roc(response = data_ROC_pos$manual_valence,
+#                                predictor = data_ROC_pos$automatic_valence, 
+#                                direction = "<")
+# # Number of cases and controls
+# ncases <- 133207
+# ncontrols <- 282904
+
+## Negative vs. Positive/Neurtal ----
+# rocobj <- pROC::roc(response = data_ROC_neg$manual_valence,
+#                     predictor = data_ROC_neg$automatic_valence, 
+#                     direction = "<")
+# # Number of cases and controls
+# ncases <- 238370
+# ncontrols <- 21676
+
+# Compute power based on the following AU intensities: 
+# 0 - 0.100 = not active
+# 0.100 - 0.217 = A
+# 0.217 - 0.334 = B
+# 0.334 - 0.622 = C
+# 0.622 - 0.910 = D
+# 0.910 - 1.000 = E
+
+## AU12 ----
+ncases <- data_ROC %>% dplyr::filter(AU12 > .1) %>% dplyr::count() %>% as.numeric()
+  
+ncontrols <- data_ROC %>% dplyr::filter(AU12 <= .1) %>% dplyr::count() %>% as.numeric()
+
+## AU20 ----
+ncases <- data_ROC %>% dplyr::filter(AU20 > .1) %>% dplyr::count() %>% as.numeric()
+
+ncontrols <- data_ROC %>% dplyr::filter(AU20 <= .1) %>% dplyr::count() %>% as.numeric()
+
+## AU3+4 ----
+ncases <- data_ROC %>% dplyr::filter(AU3_4 > .1) %>% dplyr::count() %>% as.numeric()
+
+ncontrols <- data_ROC %>% dplyr::filter(AU3_4 <= .1) %>% dplyr::count() %>% as.numeric()
+
+# Determine power for one ROC curve from the count cases and controls for an AUC of .80.
+power.roc.test(ncases = ncases, ncontrols = ncontrols, auc = 0.8)
+
+# Determine ncases & ncontrols
+# kappa is the ratio of controls to cases
+power.roc.test(auc = .7, sig.level = 0.0011, power = .99, kappa = ncontrols/ncases)
 
 # ROC: Hypothesis data (used in pre-registration) ----
 ## Read data ----
