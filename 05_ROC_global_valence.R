@@ -944,6 +944,12 @@ OBXT_irr_data_wide <- OBXT_irr_data %>%
                      names_prefix = "coder_",
                      values_from = c(FE_category))
 
+OBXT_irr_data_wide <- OBXT_irr_data_wide %>%
+  dplyr::mutate(coder_1 = base::factor(coder_1, ordered = TRUE, 
+                                       levels = c("negative", "neutral", "positive")), 
+                coder_2 = base::factor(coder_2, ordered = TRUE, 
+                                       levels = c("negative", "neutral", "positive")))
+
 OBXT_irr_data_wide %>% dplyr::summarize_all(~ sum(is.na(.x)))
 OBXT_irr_data_wide %>% dplyr::count(coder_1, coder_2) %>%
   View()
@@ -958,7 +964,7 @@ OBXT_irr_kappa_4 <- OBXT_irr_data_wide %>%
   dplyr::select(coder_1, coder_2)
 
 # Compute Cohen's kappa
-irr::kappa2(OBXT_irr_kappa_4, weight = "unweighted", sort.levels = FALSE)
+irr::kappa2(OBXT_irr_kappa_4, weight = "squared", sort.levels = TRUE)
 
 # Compute percentage agreement 
 irr::agree(OBXT_irr_kappa_4, tolerance = 0)
@@ -970,7 +976,7 @@ OBXT_irr_kappa_4_pos <- OBXT_irr_data_wide %>%
   dplyr::select(coder_1, coder_2)
 
 # Compute Cohen's kappa
-irr::kappa2(OBXT_irr_kappa_4_pos, weight = "unweighted", sort.levels = FALSE)
+irr::kappa2(OBXT_irr_kappa_4_pos, weight = "squared", sort.levels = TRUE)
 
 # Compute percentage agreement 
 irr::agree(OBXT_irr_kappa_4_pos, tolerance = 0)
@@ -981,7 +987,7 @@ OBXT_irr_kappa_8 <- OBXT_irr_data_wide %>%
   dplyr::select(coder_1, coder_2)
 
 # Compute Cohen's kappa
-irr::kappa2(OBXT_irr_kappa_8, weight = "unweighted", sort.levels = FALSE)
+irr::kappa2(OBXT_irr_kappa_8, weight = "unweighted", sort.levels = TRUE)
 
 # Compute percentage agreement
 irr::agree(OBXT_irr_kappa_8, tolerance = 0)
@@ -1066,11 +1072,11 @@ ncases <- data_ROC %>% dplyr::filter(AU3_4 > .1) %>% dplyr::count() %>% as.numer
 ncontrols <- data_ROC %>% dplyr::filter(AU3_4 <= .1) %>% dplyr::count() %>% as.numeric()
 
 # Determine power for one ROC curve from the count cases and controls for an AUC of .80.
-power.roc.test(ncases = ncases, ncontrols = ncontrols, auc = 0.8)
+power.roc.test(ncases = ncases, ncontrols = ncontrols, auc = 0.7)
 
 # Determine ncases & ncontrols
 # kappa is the ratio of controls to cases
-power.roc.test(auc = .7, sig.level = 0.0011, power = .99, kappa = ncontrols/ncases)
+power.roc.test(auc = .7, sig.level = 0.001, power = .99, kappa = ncontrols/ncases)
 
 # ROC: Hypothesis data (used in pre-registration) ----
 ## Read data ----
