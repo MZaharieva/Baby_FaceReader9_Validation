@@ -143,6 +143,10 @@ BFR_ts_data <- BFR_ts_data %>%
                 valence = Valence, 
                 arousal = Arousal, 
                 video_quality = Quality, 
+                # Uncomment if adding out-of-plane head rotation variables
+                #pitch = Pitch, 
+                #yaw = Yaw, 
+                #roll = Roll,
                 # Action units for positive facial expressions
                 # AU6, AU25, AU26, AU26 are shared with negative facial expressions:
                 AU6 = `Action Unit 06 - Cheek Raiser`, 
@@ -176,6 +180,11 @@ BFR_ts_data <- BFR_ts_data %>%
   dplyr::mutate(participant_id = as.numeric(stringr::str_match(participant_id, '(\\d+)')[,2]),
                 age = as.numeric(stringr::str_match(analysis_id, 'Analysis (\\d)\\d')[,2]),
                 int_partner = as.numeric(stringr::str_match(analysis_id, 'Analysis \\d(\\d)')[,2]),
+                # Uncomment if adding out-of-plane head rotation variables
+                #pitch = base::abs(as.numeric(pitch)), 
+                #yaw = base::abs(as.numeric(yaw)),
+                #roll = base::abs(as.numeric(roll)),
+                #head_rotation = mean(yaw, pitch, trim = 0, na.rm = TRUE),
                 int_partner_join = dplyr::case_when(
                   # BFR 1 (father) is assigned to OBXT 0 (father)
                   int_partner == 1 ~ 0,
@@ -190,10 +199,13 @@ BFR_ts_data <- BFR_ts_data %>%
                                          TRUE ~ ''),
                 dplyr::across(.cols = c(valence:AU24), .fns = ~ dplyr::na_if(.x, 'FIND_FAILED')),
                 dplyr::across(.cols = c(valence:AU24), .fns = ~ dplyr::na_if(.x, 'FIT_FAILED')),
-                dplyr::across(.cols = c(valence:AU24), .fns = as.numeric))
+                dplyr::across(.cols = c(valence:AU24), .fns = as.numeric)) 
 
 # Remove any duplicates (this could occur if logs in the data folder are duplicated).
 BFR_ts_data <- distinct(BFR_ts_data)
+
+# Save data file containing out-of-head rotation variables. 
+#saveRDS(BFR_ts_data, file = paste0("output/", analysis_type, "/BFR_ts_data_head_rotations.rds"))
 
 # Check count unique participant files
 # N = 307?
@@ -329,6 +341,7 @@ df_out <- df_out %>%
   dplyr::arrange(participant_id, age, int_partner_join) %>%
   dplyr::filter(OBXT != dplyr::lag(OBXT, n = 1))
 
+count(BFR_OBXT_data, is.na(bfr))
 ## Sync the BFR and OBXT data streams into a single data frame by participant ID and time stamp ----
 # Could also consider left join to only keep rows that were matched, filter would then not be required. 
 BFR_OBXT_data <- df_out %>%
@@ -455,6 +468,8 @@ BFR_OBXT_valid_data <- BFR_OBXT_data %>%
 # Continue in "03_test_lag.R" after saving the data.
 saveRDS(BFR_OBXT_valid_data, file = paste0("output/", analysis_type, "/BFR_OBXT_data.rds"))
 
+# Continue in "03_test_lag.R" after saving the data.
+#saveRDS(BFR_OBXT_valid_data, file = paste0("output/", analysis_type, "/BFR_OBXT_data_head_rotations.rds"))
 
 
 
