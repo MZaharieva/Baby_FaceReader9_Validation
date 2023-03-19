@@ -29,6 +29,8 @@ if (!exists("analysis_type")){
 # Based on the dataset ("smooth" or "raw"), specify input and output paths. 
 # Path to individual data files analyzed with(out) temporal smoothing.
 bfr_data_path <- paste0('output/', analysis_type,'/BFR_OBXT_data.rds')
+# Path to datafile with head rotation variables.
+#bfr_data_path <- paste0('output/', analysis_type,'/BFR_OBXT_data_head_rotations.rds')
 
 # With smoothing
 #BFR_OBXT_valid_data <- readRDS(file = "output/BFR_OBXT_data_smoothing.rds")
@@ -65,24 +67,21 @@ BFR_OBXT_valid_data <- BFR_OBXT_valid_data %>%
   dplyr::mutate(FE_category = ordered(FE_category, 
                                levels = c("not_codable", "negative", "neutral", "positive"), 
                                labels = c("Not Visible", "Negative", "Neutral", "Positive"))) %>%
+  #dplyr::mutate(head_rotation = (yaw + pitch)/2) %>%
   dplyr::select(participant_id, int_partner, age, 
                 sex, time_st, time_rel_sf, video_quality,
                 valence, arousal, FE_category, error, dplyr::starts_with("AU"), 
+                #pitch, yaw, roll, head_rotation,
                 dplyr::everything()) %>%
   dplyr::mutate(dplyr::across(dplyr::starts_with("AU"), as.numeric))
 
-# Save data files with smoothing
-# saveRDS(BFR_OBXT_valid_data, file = "output/BFR9_OBXT_dyadic_data_valid_smoothing.rds")
-
-# Save data files without smoothing
-# saveRDS(BFR_OBXT_valid_data, file = "output/BFR9_OBXT_dyadic_data_valid_no smoothing.rds")
-
+# Save data file
 saveRDS(BFR_OBXT_valid_data, file = paste0("output/", analysis_type, "/BFR_OBXT_valid_data.rds"))
 
-# Descriptives ----
+# # Save data file with head rotation
+# saveRDS(BFR_OBXT_valid_data, file = paste0("output/", analysis_type, "/BFR_OBXT_valid_data_head_rotation.rds"))
 
-# BFR_OBXT_valid_data <- readr::read_rds("output/BFR9_OBXT_dyadic_data_valid_no smoothing.rds")
-# BFR_OBXT_valid_data <- readr::read_rds("output/BFR9_OBXT_dyadic_data_valid_smoothing.rds")
+# Descriptives ----
 
 ## Automatic Valence Descriptives per Manually Coded FE category ----
 
@@ -92,6 +91,8 @@ FE_valence_ranges_overall <- BFR_OBXT_valid_data %>%
   #dplyr::group_by(FE_category) %>%
   dplyr::group_by(FE_category, age) %>%
   dplyr::summarise(dplyr::across(c(valence, arousal, video_quality, 
+                                   # head rotation variables
+                                   #pitch, yaw, roll, head_rotation,
                                    # positive & shared AU's
                                    AU12, AU6, AU25, AU26, AU27,
                                    # negative AU's
@@ -700,4 +701,214 @@ vq_age_ind <- BFR_OBXT_valid_data %>%
 # Save plot. 
 ggplot2::ggsave(file = paste0("rplots/", analysis_type, "/vq_age_ind.jpg"), 
                 vq_age_ind, width = 25, height = 20, units = "cm", dpi = 600)
+
+
+# Head Rotations ----
+
+## Descriptives ----
+
+#Means and sd's for yaw, pitch, roll per facial expression category, age and overall
+BFR_OBXT_head_rotation_summary <- BFR_OBXT_valid_data %>%
+   dplyr::filter(FE_category != "Not visible") %>%
+   #dplyr::group_by(., FE_category) %>%
+   dplyr::group_by(., age, FE_category) %>%
+   dplyr::summarise(across(c(head_rotation, pitch, yaw, roll), 
+                           list(mean = ~ mean(.x, na.rm = TRUE), 
+                                sd = ~ sd(.x, na.rm = TRUE), 
+                                min = ~ min(.x, na.rm = TRUE), 
+                                max = ~ max(.x, na.rm = TRUE),
+                                n_hr_samples = ~ n(),
+                                n_hr_above_20 = ~ sum(.x > 20), 
+                                prop_hr_above_20 = ~ sum(.x > 20)/n()
+                                ), 
+                           .names = "{.col}_{.fn}"))
+
+readr::write_excel_csv2(BFR_OBXT_head_rotation_summary, 
+                         file = paste0("output/", analysis_type, "/head_rotation_summary_age.csv"), 
+                         na = "NA")
+
+## Plots ----
+
+# Head Rotations per Manually Coded Facial 
+# Expression Category at 4 and at 8 Months.
+head_rotation_age <- BFR_OBXT_valid_data %>%
+  dplyr::mutate(age = dplyr::recode_factor(age, 
+                                           `4` = "at 4 Months", 
+                                           `8` = "at 8 Months"),
+                'Head Rotation' = factor(paste(FE_category, age), 
+                                         levels = c("Positive at 4 Months",
+                                                    "Positive at 8 Months",
+                                                    "Neutral at 4 Months",
+                                                    "Neutral at 8 Months",
+                                                    "Negative at 4 Months",
+                                                    "Negative at 8 Months"))) %>%
+  dplyr::filter(FE_category != "Not Visible") %>%
+  ggplot2::ggplot(., aes(y = FE_category)) + 
+  ggridges::geom_density_ridges(aes(x = head_rotation, fill = `Head Rotation`),
+                                scale = 1.3, 
+                                #quantile_lines = TRUE, 
+                                #quantiles = 2, 
+                                panel_scaling = TRUE, 
+                                rel_min_height = .005,
+                                stat = "binline", 
+                                binwidth = 0.5,
+                                draw_baseline = FALSE) +
+  ggridges::theme_ridges() + 
+  ggplot2::scale_fill_viridis_d(name = "Head Rotation", 
+                                option = "D", alpha = 0.7, 
+                                direction = -1) +
+  ggplot2::labs(title = 'Head Rotation per Manually Coded Facial Expression Category', 
+                x = 'Head Rotation',  y = 'Manually Coded Facial Expression Category') + 
+  ggplot2::xlim(-2, 35) +
+  ggplot2::theme(panel.spacing = unit(0.5, "lines"), 
+                 strip.text.x = element_text(size = 14),
+                 plot.title = element_text(hjust = 0.5, margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")),
+                 axis.title.y = element_text(angle = 90, hjust = 0.5 ), 
+                 axis.title.x = element_text(angle = 0, hjust = 0.5, vjust = 1), 
+                 axis.text.y = element_text(vjust = 0.25),
+                 plot.margin = unit(c(1, 1, 1, 1), "cm"), 
+                 strip.background = element_rect(colour = "black",
+                                                 fill = "white")) 
+
+# Save plot.
+ggplot2::ggsave(file = paste0("rplots/", analysis_type, "/head_rotation_age.jpg"), 
+                head_rotation_age, width = 25, height = 20, units = "cm", dpi = 600)
+
+# Pitch per Manually Coded Facial 
+# Expression Category at 4 and at 8 Months.
+pitch_age <- BFR_OBXT_valid_data %>%
+  dplyr::mutate(age = dplyr::recode_factor(age, 
+                                           `4` = "at 4 Months", 
+                                           `8` = "at 8 Months"),
+                'Pitch' = factor(paste(FE_category, age), 
+                                 levels = c("Positive at 4 Months",
+                                            "Positive at 8 Months",
+                                            "Neutral at 4 Months",
+                                            "Neutral at 8 Months",
+                                            "Negative at 4 Months",
+                                            "Negative at 8 Months"))) %>%
+  dplyr::filter(FE_category != "Not Visible") %>%
+  ggplot2::ggplot(., aes(y = FE_category)) + 
+  ggridges::geom_density_ridges(aes(x = pitch, fill = `Pitch`),
+                                scale = 1.3, 
+                                #quantile_lines = TRUE, 
+                                #quantiles = 2, 
+                                panel_scaling = TRUE, 
+                                rel_min_height = .005,
+                                stat = "binline", 
+                                binwidth = 0.5,
+                                draw_baseline = FALSE) +
+  ggridges::theme_ridges() + 
+  ggplot2::scale_fill_viridis_d(name = "Pitch", 
+                                option = "D", alpha = 0.7, 
+                                direction = -1) +
+  ggplot2::labs(title = 'Pitch per Manually Coded Facial Expression Category', 
+                x = 'Pitch',  y = 'Manually Coded Facial Expression Category') + 
+  ggplot2::xlim(-2, 35) +
+  ggplot2::theme(panel.spacing = unit(0.5, "lines"), 
+                 strip.text.x = element_text(size = 14),
+                 plot.title = element_text(hjust = 0.5, margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")),
+                 axis.title.y = element_text(angle = 90, hjust = 0.5 ), 
+                 axis.title.x = element_text(angle = 0, hjust = 0.5, vjust = 1), 
+                 axis.text.y = element_text(vjust = 0.25),
+                 plot.margin = unit(c(1, 1, 1, 1), "cm"), 
+                 strip.background = element_rect(colour = "black",
+                                                 fill = "white")) 
+
+# Save plot.
+ggplot2::ggsave(file = paste0("rplots/", analysis_type, "/pitch_age.jpg"), 
+                pitch_age, width = 25, height = 20, units = "cm", dpi = 600)
+
+
+# Yaw per Manually Coded Facial 
+# Expression Category at 4 and at 8 Months.
+yaw_age <- BFR_OBXT_valid_data %>%
+  dplyr::mutate(age = dplyr::recode_factor(age, 
+                                           `4` = "at 4 Months", 
+                                           `8` = "at 8 Months"),
+                'Yaw' = factor(paste(FE_category, age), 
+                               levels = c("Positive at 4 Months",
+                                          "Positive at 8 Months",
+                                          "Neutral at 4 Months",
+                                          "Neutral at 8 Months",
+                                          "Negative at 4 Months",
+                                          "Negative at 8 Months"))) %>%
+  dplyr::filter(FE_category != "Not Visible") %>%
+  ggplot2::ggplot(., aes(y = FE_category)) + 
+  ggridges::geom_density_ridges(aes(x = yaw, fill = `Yaw`),
+                                scale = 1.3, 
+                                #quantile_lines = TRUE, 
+                                #quantiles = 2, 
+                                panel_scaling = TRUE, 
+                                rel_min_height = .005,
+                                stat = "binline", 
+                                binwidth = 0.5,
+                                draw_baseline = FALSE) +
+  ggridges::theme_ridges() + 
+  ggplot2::scale_fill_viridis_d(name = "Yaw", 
+                                option = "D", alpha = 0.7, 
+                                direction = -1) +
+  ggplot2::labs(title = 'Yaw per Manually Coded Facial Expression Category', 
+                x = 'Yaw',  y = 'Manually Coded Facial Expression Category') + 
+  ggplot2::xlim(-2, 35) +
+  ggplot2::theme(panel.spacing = unit(0.5, "lines"), 
+                 strip.text.x = element_text(size = 14),
+                 plot.title = element_text(hjust = 0.5, margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")),
+                 axis.title.y = element_text(angle = 90, hjust = 0.5 ), 
+                 axis.title.x = element_text(angle = 0, hjust = 0.5, vjust = 1), 
+                 axis.text.y = element_text(vjust = 0.25),
+                 plot.margin = unit(c(1, 1, 1, 1), "cm"), 
+                 strip.background = element_rect(colour = "black",
+                                                 fill = "white")) 
+
+# Save plot.
+ggplot2::ggsave(file = paste0("rplots/", analysis_type, "/yaw_age.jpg"), 
+                yaw_age, width = 25, height = 20, units = "cm", dpi = 600)
+
+
+# Yaw per Manually Coded Facial 
+# Expression Category at 4 and at 8 Months.
+roll_age <- BFR_OBXT_valid_data %>%
+  dplyr::mutate(age = dplyr::recode_factor(age, 
+                                           `4` = "at 4 Months", 
+                                           `8` = "at 8 Months"),
+                'Roll' = factor(paste(FE_category, age), 
+                               levels = c("Positive at 4 Months",
+                                          "Positive at 8 Months",
+                                          "Neutral at 4 Months",
+                                          "Neutral at 8 Months",
+                                          "Negative at 4 Months",
+                                          "Negative at 8 Months"))) %>%
+  dplyr::filter(FE_category != "Not Visible") %>%
+  ggplot2::ggplot(., aes(y = FE_category)) + 
+  ggridges::geom_density_ridges(aes(x = roll, fill = `Roll`),
+                                scale = 1.3, 
+                                #quantile_lines = TRUE, 
+                                #quantiles = 2, 
+                                panel_scaling = TRUE, 
+                                rel_min_height = .005,
+                                stat = "binline", 
+                                binwidth = 0.5,
+                                draw_baseline = FALSE) +
+  ggridges::theme_ridges() + 
+  ggplot2::scale_fill_viridis_d(name = "Roll", 
+                                option = "D", alpha = 0.7, 
+                                direction = -1) +
+  ggplot2::labs(title = 'Roll per Manually Coded Facial Expression Category', 
+                x = 'Roll',  y = 'Manually Coded Facial Expression Category') + 
+  ggplot2::xlim(-2, 35) +
+  ggplot2::theme(panel.spacing = unit(0.5, "lines"), 
+                 strip.text.x = element_text(size = 14),
+                 plot.title = element_text(hjust = 0.5, margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")),
+                 axis.title.y = element_text(angle = 90, hjust = 0.5 ), 
+                 axis.title.x = element_text(angle = 0, hjust = 0.5, vjust = 1), 
+                 axis.text.y = element_text(vjust = 0.25),
+                 plot.margin = unit(c(1, 1, 1, 1), "cm"), 
+                 strip.background = element_rect(colour = "black",
+                                                 fill = "white")) 
+
+# Save plot.
+ggplot2::ggsave(file = paste0("rplots/", analysis_type, "/roll_age.jpg"), 
+                roll_age, width = 25, height = 20, units = "cm", dpi = 600)
+
 

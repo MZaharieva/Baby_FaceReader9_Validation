@@ -22,6 +22,7 @@ library(broom) # nesting statistical analyses
 library(effectsize) # computing effect sizes
 library(ggplot2) # plotting
 library(magrittr) # assignment pipe operator
+library(hrbrthemes)
 
 # Read data ----
 # Dyadic interaction dataset of infants at 4 and 8 months.
@@ -37,6 +38,9 @@ if (!exists("analysis_type")){
 # Based on the dataset ("smooth" or "raw"), specify the input and output paths. 
 bfr_data_path <- paste0('output/', analysis_type, '/BFR_OBXT_valid_data.rds')
 
+# Input path to data with head roation.
+bfr_data_path <- paste0('output/', analysis_type, '/BFR_OBXT_valid_data_head_rotation.rds')
+
 # Read .rds data file.
 data <- readr::read_rds(bfr_data_path) %>%
   #All errors are filtered out in a previous step.
@@ -45,6 +49,13 @@ data <- readr::read_rds(bfr_data_path) %>%
 # Count the number of rows per facial expression category: FE_category.
 data %>% 
   dplyr::count(FE_category, sort = TRUE) 
+
+# Robustness check for head rotation
+data <- data %>%   
+  #check whether ROC results hold with pitch and yaw <= 20 degrees.
+  dplyr::filter(pitch <= 20 | yaw <= 20) 
+  #check whether ROC results hold with pitch and yaw between 20-30 degrees. 
+  #dplyr::filter(pitch > 20 | yaw > 20) 
 
 # Automatic-Manual Valence ----
 
@@ -117,6 +128,11 @@ legend("bottomright", legend = c(
 ggplot2::ggsave(file = paste0("rplots/", analysis_type, "/ROC_AV_Multi.jpg"), 
                  plot = ggplot2::last_plot(), width = 20, height = 10, 
                  units = "cm", dpi = 600)
+
+# Save ROC plot.
+ggplot2::ggsave(file = paste0("rplots/", analysis_type, "/ROC_AV_Multi_pitch_yaw_0-20.jpg"), 
+                plot = ggplot2::last_plot(), width = 20, height = 10, 
+                units = "cm", dpi = 600)
 
 # Plot Confidence Intervals 
 pROC::ci.auc(roc_all$rocs[[1]]) # negative vs. neutral
@@ -286,9 +302,9 @@ f1_neut_pos_8 <- pROC::coords(roc_all_8$rocs[[3]], "best",
 roc_all_AU <- pROC::multiclass.roc(response = data_ROC$manual_valence, 
                                    predictor = data_ROC$AU12)
               # pROC::multiclass.roc(response = data_ROC$manual_valence, 
-              #                       predictor = data_ROC$AU12)
+              #                       predictor = data_ROC$AU3_4)
               # pROC::multiclass.roc(response = data_ROC$manual_valence, 
-              #                      predictor = data_ROC$AU20)
+              #                      predictor = data_ROC$AU12)
 
 print(roc_all_AU$auc)
 # Use print.thres = "best" to display the specificipy & sensitity thresholds.
@@ -451,12 +467,12 @@ data_ROC_AU <- data_ROC %>%
   dplyr::group_by(participant_id, age, int_partner_join) %>% 
   dplyr::filter(dplyr::n_distinct(manual_valence) > 2) %>%
   # Select which AU should predict manual valence:
-  dplyr::mutate(auc = as.numeric(pROC::multiclass.roc(response = manual_valence, 
-                                                      predictor = AU12)$auc)) %>%
+  # dplyr::mutate(auc = as.numeric(pROC::multiclass.roc(response = manual_valence, 
+  #                                                     predictor = AU12)$auc)) %>%
   # dplyr::mutate(auc = as.numeric(pROC::multiclass.roc(response = manual_valence, 
   #                                                     predictor = AU20)$auc)) %>%
-  # dplyr::mutate(auc = as.numeric(pROC::multiclass.roc(response = manual_valence, 
-  #                                                     predictor = AU3_4)$auc)) %>%
+  dplyr::mutate(auc = as.numeric(pROC::multiclass.roc(response = manual_valence, 
+                                                       predictor = AU3_4)$auc)) %>%
   dplyr::ungroup()
 
 # Summarize per video: the AUC, mean and SD video quality, number rows analyzed.
@@ -538,9 +554,35 @@ data_ROC_pos <- data_ROC_pos %>%
                                                       direction = "<")$auc)) %>%
   dplyr::ungroup()
 
+# Subset dataset with head rotation variables and auc
+data_ROC_pos <- data_ROC_pos %>%
+  dplyr::select(participant_id, int_partner, age, 
+                video_quality, manual_valence, automatic_valence,
+                pitch, yaw, roll, head_rotation, auc)
+
+# Test whether out-of-plane head rotations predicts AUC  
+auc_head_rotation_fit <- stats::lm(auc ~ pitch + yaw + age*pitch + age*yaw, data = data_ROC_pos)
+summary(auc_head_rotation_fit)
+
+# Plot correlation between pitch and auc
+data_ROC_pos %>%
+  dplyr::mutate(age = base::as.factor(data_ROC_pos$age)) %>%
+  ggplot(., aes(x = auc, y = pitch, color = age)) + 
+  geom_point(size = 1.5, alpha = 0.7) +
+  theme_ipsum()
+
 # Save the dataset as .rds file.
 saveRDS(data_ROC_pos, 
         file = paste0("output/", analysis_type, "/roc_analysis/data_ROC_pos.rds"))
+
+# Save the dataset as .rds file.
+saveRDS(data_ROC_pos, 
+        file = paste0("output/", analysis_type, "/roc_analysis/data_ROC_pos_head_rotation.rds"))
+
+# Save data file.
+readr::write_csv2(data_ROC_pos, 
+                  file = paste0("output/", analysis_type, "/roc_analysis/data_ROC_pos_head_rotation.csv"), 
+                  na = "NA")
 
 # Summarize per video: the AUC, mean and SD video quality, number rows analyzed.
 data_ROC_pos <- data_ROC_pos %>% 
@@ -548,6 +590,9 @@ data_ROC_pos <- data_ROC_pos %>%
   dplyr::summarize(auc = dplyr::first(auc), 
             video_quality_mean = mean(video_quality), 
             video_quality_sd = sd(video_quality),
+            head_rotation_mean = mean(head_rotation),
+            pitch_mean = mean(pitch),
+            yaw_mean = mean(yaw),
             n = dplyr::n(), .groups = 'drop') 
 
 # Print mean & SD AUC per video.
@@ -601,6 +646,17 @@ f1_pos_rest_AU12 <- pROC::coords(f1_pos_rest_AU12$rocs[[1]], "best",
 
 # Print F1
 (2 * (f1_pos_rest_AU12$precision * f1_pos_rest_AU12$recall))/(f1_pos_rest_AU12$precision + f1_pos_rest_AU12$recall)
+
+# Perform ROC on pp who display more than 1 manually coded FE categories.
+f1_pos_rest_AU12 <- f1_pos_rest_AU12 %>% 
+  # Nest the data within video
+  dplyr::group_by(participant_id, age, int_partner_join) %>% 
+  # Filter out infants who do not display both manually coded facial expressions 
+  dplyr::filter(dplyr::n_distinct(manual_valence) > 1) %>%
+  dplyr::mutate(auc = as.numeric(pROC::multiclass.roc(response = manual_valence,
+                                                      predictor = AU12,
+                                                      direction = "<")$auc)) %>%
+  dplyr::ungroup()
 
 ## ROC: Negative vs. Neutral/Positive: Automatic Valence ----
 
@@ -659,10 +715,8 @@ data_ROC_neg <- data %>%
                 automatic_valence = valence)
 
 # Nest the data within video
-f1_neg_neut <- data_ROC_neg %>%
-  dplyr::group_by(participant_id, age, int_partner_join) %>% 
-  # Filter out infants who do not display both manually coded facial expressions 
-  dplyr::filter(dplyr::n_distinct(manual_valence) > 1)
+f1_neg_neut <- data_ROC_neg 
+
 # Perform a binary ROC
 f1_neg_neut <-  pROC::multiclass.roc(response = f1_neg_neut$manual_valence,
                                      predictor = f1_neg_neut$automatic_valence,
@@ -701,9 +755,31 @@ data_ROC_neg  <- data_ROC_neg %>%
                                                       direction = "<")$auc)) %>%
   dplyr::ungroup()
 
+# Subset dataset with head rotation variables and auc
+data_ROC_neg <- data_ROC_neg %>%
+  dplyr::select(participant_id, int_partner, age, 
+                video_quality, manual_valence, automatic_valence,
+                pitch, yaw, roll, head_rotation, auc)
+
+# Test whether out-of-plane head rotations predicts AUC  
+auc_head_rotation_fit <- stats::lm(auc ~ pitch + yaw + age*pitch + age*yaw, data = data_ROC_neg)
+summary(auc_head_rotation_fit)
+
+# Plot correlation between pitch and auc
+data_ROC_neg %>%
+  dplyr::mutate(age = base::as.factor(data_ROC_neg$age)) %>%
+  ggplot(., aes(x = auc, y = pitch, color = age)) + 
+  geom_point(size = 1.5, alpha = 0.7) +
+  theme_ipsum()
+
 # Save the dataset as .rds file.
 saveRDS(data_ROC_neg, 
         file = paste0("output/", analysis_type, "/roc_analysis/data_ROC_neg.rds"))
+
+# Save data file.
+readr::write_csv2(data_ROC_neg, 
+                  file = paste0("output/", analysis_type, "/roc_analysis/data_ROC_neg_head_rotation.csv"), 
+                  na = "NA")
 
 # Summarize per video: the AUC, mean and SD video quality, number rows analyzed.
 data_ROC_neg <- data_ROC_neg %>% 
@@ -732,14 +808,15 @@ data_ROC_neg_AU <- data %>%
 
 # Nest the data within video
 f1_neg_neut_AU <- data_ROC_neg_AU %>%
-  dplyr::group_by(participant_id, age, int_partner_join) %>% 
+  dplyr::group_by(participant_id, age, int_partner_join) %>%
   # Filter out infants who do not display both manually coded facial expressions 
   dplyr::filter(dplyr::n_distinct(manual_valence) > 1)
+
 # Perform a binary ROC
 f1_neg_neut_AU <- pROC::multiclass.roc(response = f1_neg_neut_AU$manual_valence,
-                                        predictor = f1_neg_neut_AU$AU20,
-                                        direction = ">", 
-                                        levels = c("Negative", "Neutral", "Positive"))
+                                       predictor = f1_neg_neut_AU$AU3_4,
+                                       direction = "<",
+                                       levels = c("Negative", "Neutral", "Positive"))
 
 # Plot the binary ROC curve for positive vs rest and the curve for negative vs. neutral
 pROC::plot.roc(f1_neg_neut_AU$rocs[[1]], print.auc = TRUE, 
@@ -769,7 +846,7 @@ f1_neg_neut_AU <- pROC::coords(f1_neg_neut_AU$rocs[[1]], "best",
 # Print F1
 (2 * (f1_neg_neut_AU$precision * f1_neg_neut_AU$recall))/(f1_neg_neut_AU$precision + f1_neg_neut_AU$recall)
 
-# Age, Interaction Partner, Face Model Fit Quality ----
+# Age, Interaction Partner, Face Model Fit Quality, Head Rotations ----
 
 ## Positive vs. Rest ----
 # AUC for 4 vs 8MO.  
@@ -784,7 +861,7 @@ boxplot(video_quality_mean ~ age, data = data_ROC_pos)
 # Use age, interaction partner & video quality to predict AUC.
 data_ROC_pos$age <- base::as.factor(data_ROC_pos$age)
 data_ROC_pos$int_partner_join <- base::as.factor(data_ROC_pos$int_partner_join)
-anova_pos <- stats::lm(auc ~ age + int_partner_join + video_quality_mean, data = data_ROC_pos)
+anova_pos <- stats::lm(auc ~ age + int_partner_join + video_quality_mean + head_rotation_mean, data = data_ROC_pos)
 base::summary(anova_pos)
 
 # Compute effect size: eta squared. 

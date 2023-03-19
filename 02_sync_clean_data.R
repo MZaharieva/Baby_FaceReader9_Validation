@@ -184,7 +184,6 @@ BFR_ts_data <- BFR_ts_data %>%
                 #pitch = base::abs(as.numeric(pitch)), 
                 #yaw = base::abs(as.numeric(yaw)),
                 #roll = base::abs(as.numeric(roll)),
-                #head_rotation = mean(yaw, pitch, trim = 0, na.rm = TRUE),
                 int_partner_join = dplyr::case_when(
                   # BFR 1 (father) is assigned to OBXT 0 (father)
                   int_partner == 1 ~ 0,
