@@ -32,12 +32,11 @@ analysis_type <- "smooth"
 
 # Specify scripts to be run ----
 
-ls_scripts <- c("02_sync_clean_data.R", "03_test_lag.R", 
-                "04_apply_lag_and_explore.R", "05_ROC_global_valence.R", 
-                "06_explore_AU_distributions.R", "07_logistic_regression_apriori_AU.R")
+ls_scripts <- c("02_compute_face_size.R", "03_sync_clean_data.R", "04_test_lag.R", 
+                "05_apply_lag_and_explore.R", "06_ROC_global_valence.R", 
+                "07_explore_AU_distributions.R", "08_logistic_regression_apriori_AU.R")
 
 # Run scripts ----
-ls_scripts <- c("07_logistic_regression_apriori_AU.R")
 for (script in ls_scripts) {
   source(script, echo = TRUE)
 }
