@@ -4,6 +4,7 @@
 .Ruserdata
 *.zip
 *.odx
+*.jasp
 analysis_pipeline/
 Bayes_literature/
 archived/
@@ -11,6 +12,7 @@ data/BFR9_raw/Logs/*.txt
 data/BFR9_raw/Logs_backup/
 data/BFR9_raw/Logs_N285/
 data/BFR9_smoothing/Logs/*.txt
+data/BFR9_smoothing/Logs_landmarks_heart_rate/*.txt
 data/BFR9_smoothing/Logs_backup/
 data/BFR9_smoothing/Logs_N285/
 data/BFR9_raw_general/
@@ -21,6 +23,10 @@ output/smooth/brf9_mlr_data.csv
 output/raw/mlr_analysis/brf9_mlr_data.csv
 output/raw/BFR_ts_data.rds
 output/raw/brf9_mlr_data.csv
+output/smooth/BFR_ts_data_landmarks.rds
+output/smooth/BFR_ts_data_landmarks_age.rds
+output/smooth/BFR_ts_data_landmarks_age_clean.rds
+output/smooth/BFR_ts_data_landmarks_clean.rds
 reports/
 *.Rmd
 *.html
