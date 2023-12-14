@@ -1,2 +1,2 @@
-# Baby_FaceReader9_Validation
- Validating Baby FaceReader 9 in a manually coded longitudinal sample of infants at 4 and 8 months during face-to-face interactions with three interaction partners: mother, father, and unfamiliar adult. 
+### Validating Automated Measurement of Affective Facial Expressions Using Baby FaceReader 9 in a Longitudinal Sample of Infants at 4 and 8 Months
+This repository contains the analysis scripts used to validate Baby FaceReader 9 with mannual coding of affective facial expressions in a longitudinal sample of infants at 4 and 8 months during face-to-face interactions with three interaction partners: mother, father, and unfamiliar adult. 
