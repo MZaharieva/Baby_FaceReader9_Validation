@@ -105,12 +105,6 @@ readr::write_csv2(data_mlr,
                   file = paste0("output/", analysis_type, "/mlr_analysis/brf9_mlr_data.csv"), 
                   na = "NA")
 
-# Compute class weights. 
-# Negative = 21676/275449 = 0.08
-# I.e., the penalty for incorrectly classifying negative as neutral is 92 times as
-# severe as the other way around. 
-data_mlr_neg %>% dplyr::count(manual_valence)
-
 # Prepare data for comparing negative vs. neutral manually coded facial expressions. 
 data_mlr_neg <- data_mlr %>% 
   dplyr::filter(manual_valence != 'Positive') %>%
@@ -120,12 +114,14 @@ data_mlr_neg <- data_mlr %>%
     manual_valence == "Negative" ~ 92, 
     manual_valence == "Neutral" ~ 8))
 
+# Compute class weights. 
+# Negative = 21676/275449 = 0.08
+# I.e., the penalty for incorrectly classifying negative as neutral is 92 times as
+# severe as the other way around. 
+data_mlr_neg %>% dplyr::count(manual_valence)
+
 # Check inverse class weights assignment.
 data_mlr_neg %>% dplyr::count(class_weights)
-
-# Compute class weights. 
-# Positive = 133207/297125 = 0.45
-data_mlr %>% dplyr::count(manual_valence_pos_rest)
 
 # Prepare data for comparing positive vs. other manually coded facial expressions. 
 data_mlr <- data_mlr %>% dplyr::select(manual_valence_pos_rest,
@@ -136,6 +132,10 @@ data_mlr <- data_mlr %>% dplyr::select(manual_valence_pos_rest,
             dplyr::mutate(class_weights = dplyr::case_when(
               manual_valence_pos_rest == "Positive" ~ 55, 
               manual_valence_pos_rest == "Rest" ~ 45))
+
+# Compute class weights. 
+# Positive = 133207/297125 = 0.45
+data_mlr %>% dplyr::count(manual_valence_pos_rest)
 
 # Check inverse class weights assignment.
 data_mlr %>% dplyr::count(class_weights)
@@ -220,11 +220,16 @@ AU_corr <- data_mlr %>%
 
 # Correlations positive AU's
 AU_corr_pos <- AU_corr %>% 
-  dplyr::select(AU12, AU6, AU25, AU26, AU27, AU_mouth_opening, 
+  dplyr::select(AU12, AU6, AU7, AU25, AU26, AU27, AU_mouth_opening, 
          AU12_AU6_int, AU12_mouth_opening_int) %>%
   stats::cor(.)
 
-corrplot::corrplot(AU_corr_pos, method = "number", type = "upper")
+# Compute sig. level
+pval <- psych::corr.test(AU_corr, adjust = "none")$p
+
+corrplot::corrplot(AU_corr_pos, method = "number", type = "upper", 
+                   p.mat = pval, 
+                   sig.level = 0, insig = c("p-value"))
 
 # Save correlation matrix to .csv.
 readr::write_csv2(tibble::as_tibble(AU_corr_pos["corrPos"["corr"]], 
@@ -484,14 +489,18 @@ write.csv2(tibble::tibble(AU_int_neg_sig_fit_summary[["fixed"]]),
 # Read model summary.
 AU_int_neg_sig_fit_summary <- readr::read_rds(paste0('output/', analysis_type, '/mlr_analysis/AU_int_neg_sig_fit.rds'))
 
-
 ## Predicted probabilities ----
 
-# Select model
+# Select model: "AU_int_neg_sig_fit" for negative AU model; AU_int_pos_fit for positive AU model.
 AU_model <- AU_int_neg_sig_fit
-# Select dataset: 'data_mlr_pos' for positive AU model or 'data_mlr_neg' for negative AU model. 
-data_pred <- data_mlr_neg %>%
-  mutate(manual_valence = forcats::fct_drop(manual_valence))
+AU_model <- AU_int_pos_fit
+
+# Select dataset: 'data_mlr' for positive AU model or 'data_mlr_neg' for negative AU model. 
+data_pred <- data_mlr %>%
+  mutate(manual_valence = forcats::fct_drop(manual_valence_pos_rest))
+
+# data_pred <- data_mlr_neg %>%
+#   mutate(manual_valence = forcats::fct_drop(manual_valence))
 
 # Derive predicted values for the whole dataset incrementally, starting at row 1.
 sample_start <- 1
@@ -538,7 +547,9 @@ write.csv2(data_pred_neg,
            row.names = TRUE)
 
 # Specify model for calculating F1 scores.
+data_pred <- data_pred_pos
 data_pred <- data_pred_neg
+
 
 # Create function: agreement_metrics, which computes agreement metrics (positive agreement = F1, negative agreement)
 # for a given dataset and a ROC contrast index to compute
@@ -603,17 +614,29 @@ tn / (fp + tn)
 
 # F1 score formula = (2 * (precision * recall))/(precision + recall)
 
-# F1 score for positive vs. negative/neutral = 0.66
+# PA (F1 score) for positive vs. negative/neutral = 0.66
 (2 * ((tp / (tp + fp)) * (tp / (tp + fn)))) / (tp/(tp + fp) + (tp / (tp + fn)))
 
-# Opposite F1 score for negative/neutral vs. positive = 0.88
+# PA formula from manuscript: Agrees
+(2 * tp) / ((2* tp) + fp + fn)
+
+# NA (Opposite F1) score for negative/neutral vs. positive = 0.88
 (2 * ((tn / (tn + fn)) * (tn / (tn + fp))))/((tn / (tn + fn)) + (tn / (tn + fp)))
 
-# F1 score for negative vs neutral = 0.38
+# NA formula from manuscript: Agrees 
+(2 * tn) / ((2 * tn) + fp + fn)
+
+# PA (F1 score) for negative vs neutral = 0.38
 (2 * ((tp / (tp + fp)) * (tp / (tp + fn)))) / (tp/(tp + fp) + (tp / (tp + fn)))
 
-# Opposite F1 score for neutral vs negative = 0.91
+# PA formula from manuscript: Agrees
+(2 * tp) / ((2* tp) + fp + fn)
+
+# NA (Opposite F1 score) for neutral vs negative = 0.91
 (2 * ((tn / (tn + fn)) * (tn / (tn + fp))))/((tn / (tn + fn)) + (tn / (tn + fp)))
+
+# NA formula from manuscript: Agrees 
+(2 * tn) / ((2 * tn) + fp + fn)
 
 ## Plot model results ----
 

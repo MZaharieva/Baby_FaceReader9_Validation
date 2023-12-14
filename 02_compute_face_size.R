@@ -43,10 +43,6 @@ BFR_ts_data <- purrr::map_dfr(bfr_data_files,
                                               age = as.numeric(stringr::str_match(src, 'Analysis (\\d)\\d')[,2]),
                                               ) %>%
                                 dplyr::select(src, age, Landmarks))
-###                                
-# Participant 2_Participant 2_Analysis 82_video_20230607_135453_detailed.txt
-# Participant 2_Participant 2_Analysis 83_video_20230607_135500_detailed.txt
-
 
 # Save data file. 
 saveRDS(BFR_ts_data, file = paste0("output/", analysis_type, "/BFR_ts_data_landmarks.rds"))

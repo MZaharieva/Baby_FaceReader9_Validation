@@ -42,7 +42,8 @@ data_mlr <- data %>%
          manual_valence_pos_rest = dplyr::recode(FE_category, 
                                                  `Negative` = 'rest', 
                                                  `Neutral` = 'rest', 
-                                                 `Positive` = 'positive')) %>%
+                                                 `Positive` = 'positive'), 
+         AU_mouth_opening = (AU25 + AU26 + AU27)/3) %>%
   dplyr::rename(automatic_valence = valence)
 
 # Check whether FE_category is successfully recoded into manual_valence.
@@ -106,12 +107,26 @@ plot_age <- data_mlr %>%
   dplyr::summarise(dplyr::across(dplyr::starts_with("AU"), mean)) %>%
   dplyr::ungroup()
 
+# Apriori AU's
+plot_apriori <- data_mlr %>% 
+  #dplyr::mutate(age = dplyr::recode_factor(age, 
+   #                                        `4` = "4 Months",
+   #                                        `8` = "8 Months")) %>%
+  dplyr::select(participant_id, 
+                manual_valence, 
+                AU12, AU6, AU_mouth_opening, 
+                AU20, AU17, AU3_4) %>%
+  dplyr::group_by(manual_valence) %>%
+  dplyr::summarise(dplyr::across(dplyr::starts_with("AU"), mean)) %>%
+  dplyr::ungroup()
+
 # Positive AU's
 plot_age_pos <- data_mlr %>% 
   dplyr::mutate(age = dplyr::recode_factor(age, 
                                            `4` = "4 Months",
                                            `8` = "8 Months")) %>%
-  dplyr::select(participant_id, age, manual_valence, AU12, AU6, AU25, AU26, AU27) %>%
+  dplyr::select(participant_id, age, manual_valence, 
+                AU12, AU6, AU25, AU26, AU27) %>%
   dplyr::group_by(age, manual_valence) %>%
   dplyr::summarise(dplyr::across(dplyr::starts_with("AU"), mean)) %>%
   dplyr::ungroup()
@@ -121,7 +136,9 @@ plot_age_neg <- data_mlr %>%
   dplyr::mutate(age = dplyr::recode_factor(age, 
                                            `4` = "4 Months",
                                            `8` = "8 Months")) %>%
-  dplyr::select(participant_id, age, manual_valence, AU20, AU17, AU3_4, AU6, AU7, AU25, AU26, AU27) %>%
+  dplyr::select(participant_id, age, manual_valence, 
+                AU20, AU17, AU3_4, AU6, AU7, 
+                AU25, AU26, AU27) %>%
   dplyr::group_by(age, manual_valence) %>%
   dplyr::summarise(dplyr::across(dplyr::starts_with("AU"), mean)) %>%
   dplyr::ungroup()
@@ -140,9 +157,9 @@ plot_int_partner <- data_mlr %>%
 ## Define plot tick marks -----
 
 # Apriori AU's tick marks
-x_tick <- base::match(c("AU12", "AU6", "AU25",
-                        "AU26", "AU27", "AU17",
-                        "AU20", "AU3_4", "AU7"), base::names(plot_age))
+x_tick <- base::match(c("AU12", "AU6", "AU_mouth_opening",
+                        "AU17", "AU20", "AU3_4"), base::names(plot_apriori))
+
 # Remove missing values
 x_tick <- stats::na.omit(x_tick)
 
@@ -168,10 +185,83 @@ x_tick_rest <- stats::na.omit(x_tick_rest)
 
 # Plot Apriori AU's * Age ----
 
+## All apriori AU's ----
+
+# Add standard deviations
+
+#Baby FaceReader 9 (Noldus, 2021) indicates that the raw action unit output represents continuous action unit intensities from 0 (low) to 1 (high) corresponding to the intensity categories described in Baby FACS (Oster, 2006): "inactive" [.00-.10], A "trace" [.10-.22]; B "slight " [.22-.33]; C "pronounced" [.33- .62]; D "severe" [.62-.91]; E "max" [.91-1.00] (Noldus, 2021).
+
+# Prepare plot data.
+plot_AU_df <- plot_apriori
+
+# Plot.
+plot_apriori %>% 
+  dplyr::mutate(manual_valence = dplyr::recode_factor(manual_valence, 
+                                                      `negative` = "Negative",
+                                                      `neutral` = "Neutral",
+                                                      `positive` = "Positive")) %>%
+  GGally::ggparcoord(plot_AU_df,
+                     columns = x_tick, 
+                     groupColumn = "manual_valence", 
+                     showPoints = TRUE, 
+                     #title = "Automatically Detected Action Unit Activation Intensity \nper Manually Coded Facial Expression Category",
+                     alphaLines = 1,
+                     scale = "globalminmax") +
+  scale_size_continuous(guide = "none") +
+  ggplot2::labs(y = element_text("Mean Activation Intensity"), 
+                x = element_text("Automatically Detected Action Units"), 
+                color = 'Manually Coded \nFacial Expression',  
+                shape = 'Age', 
+                ) +
+  ggplot2::geom_line(size = 2, 
+                     axis.ticks.x.bottom = unit(-.25, "cm")) +
+  ggplot2::geom_point(size = 4) + 
+  viridis::scale_color_viridis(discrete = TRUE) +
+  ggplot2::scale_y_continuous(breaks = seq(0, 1, by = .10), 
+                              limits = c(0, 1)) +  
+  hrbrthemes::theme_ipsum()+
+  guides(color = guide_legend(override.aes = list(size = 2))) +
+  ggplot2::theme(plot.title = element_text(size = 14, hjust = 0.5, 
+                                           margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")), 
+                 axis.title.y = element_text(size = 14, angle = 90, hjust = 0.5, 
+                                             margin = margin(t = , r = 15, b = 0, l = 0)), 
+                 axis.title.x = element_text(size = 14, angle = 0, hjust = 0.5, 
+                                             margin = margin(t = 15, r = 0, b = 0, l = 0)), 
+                 axis.text.y = element_text(size = 14, vjust = 0.25, 
+                                            margin = margin(t = 0, r = 20, b = 0, l = 0)), 
+                 plot.margin = unit(c(1, 1, 1, 1), "cm"),
+                 legend.text = element_text(size = 14), 
+                 legend.title = element_text(size = 14), 
+                 panel.grid.major.x = element_blank(), 
+                 panel.grid.minor.y = element_blank(), 
+                 ) +
+  ggplot2::scale_x_discrete(
+    labels = c("AU12 \nLip Corner Puller", "AU6 \nCheek Raiser", 
+               "AU25 & AU26 & AU27 \nMouth Opening", 
+               "AU20 \nLip Stretcher", "AU17 \nChin Raiser", 
+               "AU3 & AU4 \nBrow Lowering"))  
+
+
+# # Make sure that the mapping of interaction partner is correct (and not jumbled by ggparcoord)
+# plot_AU_df$data <- plot_age_pos %>%
+#   dplyr::select(age) %>%
+#   dplyr::mutate(`.ID` = base::factor(dplyr::row_number())) %>%
+#   dplyr::left_join(dplyr::select(plot_AU_df$data, -age), ., by = '.ID')
+# 
+# # Final plot.
+# AU_age <- plot_AU_df + 
+#   ggplot2::geom_point(aes(shape = age), size = 4) + 
+#   ggplot2::scale_shape_manual(name = "Age", values = c(17, 15))
+
+# Save plot.
+ggplot2::ggsave(file = paste0("rplots/", analysis_type, "/Apriori_AU.jpg"),
+                plot = plot_AU_df, width = 40, height = 20, units = "cm", dpi = 600)
+
+
 ## Positive AU's ----
 
 # Prepare plot data.
-plot_AU_df <- plot_age_pos 
+plot_AU_df <- plot_age_apriori
 
 # Plot.
 plot_AU_df <- plot_AU_df %>% 
@@ -179,11 +269,11 @@ plot_AU_df <- plot_AU_df %>%
                                                       `negative` = "Negative",
                                                       `neutral` = "Neutral",
                                                       `positive` = "Positive")) %>%
-  GGally::ggparcoord(.,
-                     columns = x_tick_pos, 
+  GGally::ggparcoord(plot_AU_df,
+                     columns = x_tick, 
                      groupColumn = "manual_valence", 
                      showPoints = FALSE, 
-                     title = "Positive Action Unit Activation Intensity per Facial Expression Category",
+                     #title = "Automatically Detected Action Unit Activation Intensity \nper Manually Coded Facial Expression Category",
                      alphaLines = 1,
                      scale = "globalminmax") +
   ggplot2::labs(y = element_text("Mean Activation Intensity"), 
@@ -201,8 +291,11 @@ plot_AU_df <- plot_AU_df %>%
                  legend.title = element_text(size = 14)) + 
   ggplot2::ylim(0, 1) +
   ggplot2::scale_x_discrete(
-    labels = c("AU12 \nLip Corner Puller", "AU6 \nCheek Raiser", "AU25 \nLips Part", 
-               "AU26 \nJaw Drop", "AU27 \nMouth Stretch")) 
+    labels = c("AU12 \nLip Corner Puller", "AU6 \nCheek Raiser", 
+               "AU25 & AU26 & AU27 \nMouth Opening", 
+               "AU20 \nLip Stretcher", "AU17 \nChin Raiser", 
+               "AU3 & AU4 \nBrow Lowering")) 
+plot_AU_df
 
 # Make sure that the mapping of interaction partner is correct (and not jumbled by ggparcoord)
 plot_AU_df$data <- plot_age_pos %>%
